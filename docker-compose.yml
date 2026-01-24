@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: tendertracker-postgres
+    environment:
+      POSTGRES_DB: tendertracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/postgres/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tendertracker-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tendertracker-backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=tendertracker;Username=postgres;Password=postgres"
+      GosPlanApi__BaseUrl: "https://v2.gosplan.info/api/v2"
+      GosPlanApi__RequestDelayMs: "1000" # 1 запрос в секунду
+      ASPNETCORE_URLS: "http://+:80"
+    ports:
+      - "5000:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tendertracker-network
+    volumes:
+      - ~/.nuget/packages:/root/.nuget/packages:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tendertracker-frontend
+    ports:
+      - "4300:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - tendertracker-network
+    volumes:
+      - ./frontend/src:/usr/share/nginx/html/src:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  tendertracker-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

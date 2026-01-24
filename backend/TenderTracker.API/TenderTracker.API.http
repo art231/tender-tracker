@@ -1,0 +1,6 @@
+@TenderTracker.API_HostAddress = http://localhost:5007
+
+GET {{TenderTracker.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

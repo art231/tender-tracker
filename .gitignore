@@ -1,0 +1,54 @@
+# General
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Docker
+*.dockerignore
+docker-compose.override.yml
+
+# OS generated files
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary build files
+build/
+dist/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+*.lcov
+
+# Dependencies (if any in root)
+node_modules/

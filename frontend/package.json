@@ -1,0 +1,26 @@
+{
+  "name": "tendertracker-frontend",
+  "version": "1.0.0",
+  "description": "AngularJS frontend for TenderTracker system",
+  "main": "src/app/app.js",
+  "scripts": {
+    "prepare-libs": "node prepare-libs.js",
+    "prestart": "npm run prepare-libs",
+    "start": "http-server -p 3000 -c-1",
+    "build": "echo 'No build step required for AngularJS 1.x'",
+    "test": "echo 'No tests configured'"
+  },
+  "dependencies": {
+    "angular": "1.8.3",
+    "bootstrap": "5.3.0",
+    "bootstrap-icons": "^1.13.1",
+    "jquery": "3.6.0",
+    "rxjs": "6.6.7"
+  },
+  "devDependencies": {
+    "fs-extra": "^11.3.3",
+    "http-server": "14.1.1"
+  },
+  "author": "TenderTracker Team",
+  "license": "MIT"
+}
