@@ -36,5 +36,20 @@ namespace TenderTracker.API.Models
         public SearchQuery? FoundByQuery { get; set; }
 
         public DateTime SavedAt { get; set; } = DateTime.UtcNow;
+
+        // Новые поля для фильтрации по сроку подачи заявок
+        public DateTime? ApplicationDeadline { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? MaxPrice { get; set; }
+
+        [MaxLength(100)]
+        public string? Region { get; set; }
+
+        [MaxLength(20)]
+        public string? CustomerInn { get; set; }
+
+        [MaxLength(500)]
+        public string? AdditionalInfo { get; set; }
     }
 }

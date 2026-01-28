@@ -47,11 +47,11 @@ if "%COMMAND%"=="up" (
         echo [✓] Backend API is running at http://localhost:5000
     )
     
-    curl -s http://localhost:8080 >nul 2>&1
+    curl -s http://localhost:4300 >nul 2>&1
     if errorlevel 1 (
         echo [!] Frontend is still starting up...
     ) else (
-        echo [✓] Frontend is running at http://localhost:8080
+        echo [✓] Frontend is running at http://localhost:4300
     )
     
     echo [✓] PostgreSQL is running at localhost:5432
@@ -62,7 +62,7 @@ if "%COMMAND%"=="up" (
     echo [✓] =========================================
     echo.
     echo Access the application at:
-    echo   Frontend: http://localhost:8080
+    echo   Frontend: http://localhost:4300
     echo   Backend API: http://localhost:5000
     echo   PostgreSQL: localhost:5432
     echo.
@@ -124,7 +124,7 @@ if "%COMMAND%"=="test" (
     )
     
     echo [✓] Testing frontend...
-    curl -s http://localhost:8080 | findstr "TenderTracker" >nul
+    curl -s http://localhost:4300 | findstr "TenderTracker" >nul
     if errorlevel 1 (
         echo [✗] Frontend: FAILED
     ) else (

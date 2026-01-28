@@ -19,4 +19,14 @@ angular.module('tenderTrackerApp', [])
     $rootScope.$on('$routeChangeError', function(event, current, previous, rejection) {
       console.error('Route change error:', rejection);
     });
-  }]);
+  }])
+  // Range filter for pagination
+  .filter('range', function() {
+    return function(input, total) {
+      total = parseInt(total);
+      for (var i = 1; i <= total; i++) {
+        input.push(i);
+      }
+      return input;
+    };
+  });

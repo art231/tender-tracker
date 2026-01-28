@@ -39,7 +39,8 @@ namespace TenderTracker.API.Services
                 query = query.Where(t => 
                     t.Title.ToLower().Contains(search) ||
                     t.PurchaseNumber.ToLower().Contains(search) ||
-                    (t.CustomerName != null && t.CustomerName.ToLower().Contains(search))
+                    (t.CustomerName != null && t.CustomerName.ToLower().Contains(search)) ||
+                    (t.AdditionalInfo != null && t.AdditionalInfo.ToLower().Contains(search))
                 );
             }
 
@@ -58,6 +59,23 @@ namespace TenderTracker.API.Services
                 query = query.Where(t => t.SavedAt <= searchParams.ToDate.Value);
             }
 
+            // Фильтрация по сроку подачи заявок
+            if (searchParams.ApplicationDeadlineFrom.HasValue)
+            {
+                query = query.Where(t => t.ApplicationDeadline >= searchParams.ApplicationDeadlineFrom.Value);
+            }
+
+            if (searchParams.ApplicationDeadlineTo.HasValue)
+            {
+                query = query.Where(t => t.ApplicationDeadline <= searchParams.ApplicationDeadlineTo.Value);
+            }
+
+            // Фильтрация истекших тендеров (по умолчанию скрываем)
+            if (!searchParams.ShowExpired)
+            {
+                query = query.Where(t => t.ApplicationDeadline == null || t.ApplicationDeadline > DateTime.UtcNow);
+            }
+
             // Get total count
             var totalCount = await query.CountAsync();
 
@@ -70,6 +88,12 @@ namespace TenderTracker.API.Services
                 "title" => searchParams.SortDescending
                     ? query.OrderByDescending(t => t.Title)
                     : query.OrderBy(t => t.Title),
+                "applicationdeadline" => searchParams.SortDescending
+                    ? query.OrderByDescending(t => t.ApplicationDeadline)
+                    : query.OrderBy(t => t.ApplicationDeadline),
+                "maxprice" => searchParams.SortDescending
+                    ? query.OrderByDescending(t => t.MaxPrice)
+                    : query.OrderBy(t => t.MaxPrice),
                 _ => searchParams.SortDescending
                     ? query.OrderByDescending(t => t.SavedAt)
                     : query.OrderBy(t => t.SavedAt)
@@ -161,7 +185,14 @@ namespace TenderTracker.API.Services
                 DirectLinkToSource = tender.DirectLinkToSource,
                 FoundByQueryId = tender.FoundByQueryId,
                 FoundByQueryKeyword = tender.FoundByQuery?.Keyword,
-                SavedAt = tender.SavedAt
+                SavedAt = tender.SavedAt,
+                
+                // Новые поля
+                ApplicationDeadline = tender.ApplicationDeadline,
+                MaxPrice = tender.MaxPrice,
+                Region = tender.Region,
+                CustomerInn = tender.CustomerInn,
+                AdditionalInfo = tender.AdditionalInfo
             };
         }
     }

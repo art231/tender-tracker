@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using TenderTracker.API.DTOs;
 using TenderTracker.API.Services;
@@ -6,6 +7,7 @@ namespace TenderTracker.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableCors("AllowAngularApp")]
     public class SearchQueriesController : ControllerBase
     {
         private readonly ISearchQueryService _searchQueryService;

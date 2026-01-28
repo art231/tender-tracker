@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test RxJS Loading</title>
+</head>
+<body>
+    <h1>Testing RxJS Loading</h1>
+    <div id="status">Loading RxJS...</div>
+    
+    <script src="src/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script>
+        setTimeout(function() {
+            const status = document.getElementById('status');
+            if (window.rxjs) {
+                status.innerHTML = 'SUCCESS: RxJS loaded!';
+                status.style.color = 'green';
+                console.log('RxJS loaded:', window.rxjs);
+                console.log('Available exports:', Object.keys(window.rxjs).filter(k => !k.startsWith('_')));
+            } else if (window.Rx) {
+                status.innerHTML = 'WARNING: Old RxJS (window.Rx) loaded';
+                status.style.color = 'orange';
+                console.log('Old RxJS loaded:', window.Rx);
+            } else {
+                status.innerHTML = 'ERROR: RxJS not loaded';
+                status.style.color = 'red';
+                console.error('RxJS not found in window object');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

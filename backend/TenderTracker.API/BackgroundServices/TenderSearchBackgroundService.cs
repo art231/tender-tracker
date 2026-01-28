@@ -82,8 +82,12 @@ namespace TenderTracker.API.BackgroundServices
                     _logger.LogInformation("Searching tenders for query: {Keyword} (ID: {Id})", 
                         query.Keyword, query.Id);
 
-                    // Поиск тендеров через API
-                    var gosPlanTenders = await gosPlanApiClient.SearchTendersAsync(query.Keyword, query.Id);
+                    // Поиск тендеров через API с расширенными параметрами
+                    // Используем увеличенный лимит (100 вместо 50) и получаем все поля
+                    var gosPlanTenders = await gosPlanApiClient.SearchTendersAdvancedAsync(
+                        query.Keyword, 
+                        query.Id,
+                        limit: 100);
                     totalTendersFound += gosPlanTenders.Count;
 
                     if (!gosPlanTenders.Any())
@@ -92,7 +96,7 @@ namespace TenderTracker.API.BackgroundServices
                         continue;
                     }
 
-                    // Преобразуем в модель FoundTender
+                    // Преобразуем в модель FoundTender с сохранением всех полей
                     var tendersToAdd = gosPlanTenders.Select(t => new FoundTender
                     {
                         ExternalId = t.ExternalId,
@@ -102,7 +106,14 @@ namespace TenderTracker.API.BackgroundServices
                         PublishDate = t.PublishDate,
                         DirectLinkToSource = t.DirectLinkToSource,
                         FoundByQueryId = query.Id,
-                        SavedAt = DateTime.UtcNow
+                        SavedAt = DateTime.UtcNow,
+                        
+                        // Новые поля
+                        ApplicationDeadline = t.ApplicationDeadline,
+                        MaxPrice = t.MaxPrice,
+                        Region = t.Region,
+                        CustomerInn = t.CustomerInn,
+                        AdditionalInfo = t.AdditionalInfo
                     }).ToList();
 
                     // Добавляем тендеры в БД (с дедупликацией)

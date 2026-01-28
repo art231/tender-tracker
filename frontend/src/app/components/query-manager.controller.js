@@ -1,7 +1,7 @@
 // Query Manager Controller
 angular.module('tenderTrackerApp')
-  .controller('QueryManagerController', ['$scope', 'TenderApiService', 
-    function($scope, TenderApiService) {
+  .controller('QueryManagerController', ['$scope', 'TenderApiService', '$timeout',
+    function($scope, TenderApiService, $timeout) {
     
     // Reactive data streams
     $scope.queries = [];
@@ -19,7 +19,7 @@ angular.module('tenderTrackerApp')
       // Subscribe to queries stream
       const queriesSubscription = TenderApiService.queries$
         .subscribe(queries => {
-          $scope.$apply(() => {
+          $scope.$evalAsync(() => {
             $scope.queries = queries;
           });
         });
@@ -27,7 +27,7 @@ angular.module('tenderTrackerApp')
       // Subscribe to loading stream
       const loadingSubscription = TenderApiService.loading$
         .subscribe(loading => {
-          $scope.$apply(() => {
+          $scope.$evalAsync(() => {
             $scope.loading = loading;
           });
         });
@@ -35,7 +35,7 @@ angular.module('tenderTrackerApp')
       // Subscribe to error stream
       const errorSubscription = TenderApiService.error$
         .subscribe(error => {
-          $scope.$apply(() => {
+          $scope.$evalAsync(() => {
             $scope.error = error;
           });
         });

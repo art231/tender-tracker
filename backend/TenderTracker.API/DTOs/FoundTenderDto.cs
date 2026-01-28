@@ -14,6 +14,13 @@ namespace TenderTracker.API.DTOs
         public int? FoundByQueryId { get; set; }
         public string? FoundByQueryKeyword { get; set; }
         public DateTime SavedAt { get; set; }
+        
+        // Новые поля
+        public DateTime? ApplicationDeadline { get; set; }
+        public decimal? MaxPrice { get; set; }
+        public string? Region { get; set; }
+        public string? CustomerInn { get; set; }
+        public string? AdditionalInfo { get; set; }
     }
 
     public class FoundTenderResponse
@@ -35,5 +42,10 @@ namespace TenderTracker.API.DTOs
         public DateTime? ToDate { get; set; }
         public string? SortBy { get; set; } = "SavedAt";
         public bool SortDescending { get; set; } = true;
+        
+        // Новые параметры фильтрации
+        public DateTime? ApplicationDeadlineFrom { get; set; }
+        public DateTime? ApplicationDeadlineTo { get; set; }
+        public bool ShowExpired { get; set; } = false;
     }
 }

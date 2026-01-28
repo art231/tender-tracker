@@ -10,8 +10,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./docker/postgres/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+      # - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  # Removed to avoid table duplication
+      # - ./docker/postgres/seed.sql:/docker-entrypoint-initdb.d/seed.sql  # Commented out to avoid potential errors
     ports:
       - "5432:5432"
     healthcheck:

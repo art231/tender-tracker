@@ -31,7 +31,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAngularApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:8080", "http://localhost:3000")
+            policy.WithOrigins("http://localhost:8080", "http://localhost:3000", 
+                               "http://localhost:4200", "http://localhost:4300")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -59,12 +60,13 @@ builder.Services.Configure<GosPlanApiOptions>(builder.Configuration.GetSection("
 builder.Services.AddScoped<ISearchQueryService, SearchQueryService>();
 builder.Services.AddScoped<IFoundTenderService, FoundTenderService>();
 
-// Add health checks
-builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
+// Add health checks (temporarily disabled for testing)
+// builder.Services.AddHealthChecks()
+//     .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
 
-// Register background service
+// Register background services
 builder.Services.AddHostedService<TenderSearchBackgroundService>();
+builder.Services.AddHostedService<TenderCleanupBackgroundService>();
 
 var app = builder.Build();
 
@@ -87,21 +89,23 @@ app.UseExceptionHandler(appBuilder =>
     });
 });
 
+app.UseRouting();
+
 app.UseCors("AllowAngularApp");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 
-// Health check endpoint
-app.MapHealthChecks("/health");
+// Health check endpoint (temporarily disabled)
+// app.MapHealthChecks("/health");
 
 app.MapControllers();
 
-// Apply database migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.Migrate();
-}
+// Apply database migrations on startup (temporarily disabled)
+// using (var scope = app.Services.CreateScope())
+// {
+//     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//     dbContext.Database.Migrate();
+// }
 
 app.Run();

@@ -6,9 +6,9 @@
     <title>TenderTracker - Система мониторинга тендеров</title>
     
     <!-- Bootstrap 5 CSS -->
-    <link href="/src/libs/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="libs/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons (local) -->
-    <link rel="stylesheet" href="/src/libs/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="libs/bootstrap-icons/font/bootstrap-icons.css">
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
     
@@ -170,7 +170,7 @@
                         </div>
                         <div class="text-center">
                             <small class="text-muted">
-                                Последнее обновление: {{formatDate(tenders.items[0]?.savedAt) || 'Нет данных'}}
+                                Последнее обновление: {{formatDate(tenders.items[0] && tenders.items[0].savedAt) || 'Нет данных'}}
                             </small>
                         </div>
                     </div>
@@ -221,19 +221,81 @@
                                         <th ng-click="sortBy('publishDate')" class="clickable">
                                             Дата публикации <i class="bi" ng-class="getSortIcon('publishDate')"></i>
                                         </th>
+                                        <th ng-click="sortBy('applicationDeadline')" class="clickable">
+                                            Срок подачи заявок <i class="bi" ng-class="getSortIcon('applicationDeadline')"></i>
+                                        </th>
+                                        <th ng-click="sortBy('maxPrice')" class="clickable">
+                                            Максимальная цена <i class="bi" ng-class="getSortIcon('maxPrice')"></i>
+                                        </th>
+                                        <th>Регион</th>
                                         <th>Найден по запросу</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr ng-repeat="tender in tenders.items">
                                         <td>
-                                            <a href="#" ng-click="openTenderLink(tender)" class="clickable">
-                                                {{tender.purchaseNumber}}
-                                            </a>
+                                            <div class="d-flex align-items-center">
+                                                <a href="#" ng-click="openTenderLink(tender)" class="clickable me-2">
+                                                    {{formatPurchaseNumber(tender)}}
+                                                </a>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            type="button" 
+                                                            data-bs-toggle="dropdown" 
+                                                            aria-expanded="false"
+                                                            title="Варианты поиска">
+                                                        <i class="bi bi-search"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               ng-click="openTenderLink(tender); $event.stopPropagation()">
+                                                                <i class="bi bi-link-45deg"></i> Основной поиск
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               ng-click="openSmartSearch(tender); $event.stopPropagation()">
+                                                                <i class="bi bi-magic"></i> Умный поиск
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               ng-if="tender.purchaseNumber && tender.purchaseNumber !== 'N/A'"
+                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.purchaseNumber), '_blank'); $event.stopPropagation()">
+                                                                <i class="bi bi-123"></i> Только по номеру
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               ng-if="tender.title && tender.title !== 'Без названия'"
+                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.title.substring(0, 50)), '_blank'); $event.stopPropagation()">
+                                                                <i class="bi bi-text-paragraph"></i> По названию
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               ng-if="tender.customerName"
+                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.customerName), '_blank'); $event.stopPropagation()">
+                                                                <i class="bi bi-building"></i> По заказчику
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td>{{tender.title}}</td>
-                                        <td>{{tender.customerName || 'Не указан'}}</td>
+                                        <td>{{formatTitle(tender.title)}}</td>
+                                        <td>{{formatCustomerName(tender.customerName)}}</td>
                                         <td>{{formatDate(tender.publishDate)}}</td>
+                                        <td>
+                                            <span ng-class="getDeadlineColorClass(tender.applicationDeadline)">
+                                                {{formatDate(tender.applicationDeadline)}}
+                                                <span ng-if="isDeadlineExpired(tender.applicationDeadline)" class="badge bg-danger ms-1">Истек</span>
+                                            </span>
+                                        </td>
+                                        <td>{{formatMaxPrice(tender.maxPrice)}}</td>
+                                        <td>{{tender.region || 'Не указан'}}</td>
                                         <td>
                                             <span class="badge bg-info">
                                                 {{getQueryName(tender.foundByQueryId)}}
@@ -241,7 +303,7 @@
                                         </td>
                                     </tr>
                                     <tr ng-if="tenders.items.length === 0">
-                                        <td colspan="5" class="text-center text-muted">
+                                        <td colspan="8" class="text-center text-muted">
                                             Нет найденных тендеров
                                         </td>
                                     </tr>
@@ -314,10 +376,10 @@
     </div>
 
     <!-- JavaScript Libraries -->
-    <script src="/src/libs/jquery/dist/jquery.min.js"></script>
-    <script src="/src/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/src/libs/angular/angular.min.js"></script>
-    <script src="/src/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="libs/jquery/dist/jquery.min.js"></script>
+    <script src="libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="libs/angular/angular.min.js"></script>
+    <script src="libs/rxjs/bundles/rxjs.umd.min.js"></script>
     
     <!-- Application Scripts -->
     <script src="app/app.js"></script>
@@ -327,17 +389,7 @@
     
     <!-- Custom Directives/Filters -->
     <script>
-        // Range filter for pagination
-        angular.module('tenderTrackerApp')
-            .filter('range', function() {
-                return function(input, total) {
-                    total = parseInt(total);
-                    for (var i = 1; i <= total; i++) {
-                        input.push(i);
-                    }
-                    return input;
-                };
-            });
+        // Additional filters or directives can be added here
     </script>
 </body>
 </html>

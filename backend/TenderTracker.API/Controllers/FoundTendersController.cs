@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using TenderTracker.API.DTOs;
 using TenderTracker.API.Services;
@@ -6,6 +7,7 @@ namespace TenderTracker.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableCors("AllowAngularApp")]
     public class FoundTendersController : ControllerBase
     {
         private readonly IFoundTenderService _foundTenderService;
@@ -28,6 +30,9 @@ namespace TenderTracker.API.Controllers
             [FromQuery] int? queryId = null,
             [FromQuery] DateTime? fromDate = null,
             [FromQuery] DateTime? toDate = null,
+            [FromQuery] DateTime? applicationDeadlineFrom = null,
+            [FromQuery] DateTime? applicationDeadlineTo = null,
+            [FromQuery] bool showExpired = false,
             [FromQuery] string? sortBy = "SavedAt",
             [FromQuery] bool sortDescending = true)
         {
@@ -45,6 +50,9 @@ namespace TenderTracker.API.Controllers
                     QueryId = queryId,
                     FromDate = fromDate,
                     ToDate = toDate,
+                    ApplicationDeadlineFrom = applicationDeadlineFrom,
+                    ApplicationDeadlineTo = applicationDeadlineTo,
+                    ShowExpired = showExpired,
                     SortBy = sortBy,
                     SortDescending = sortDescending
                 };
