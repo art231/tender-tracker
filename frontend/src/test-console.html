@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Console Errors</title>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('Global error:', msg, url, line, col, error);
+            document.getElementById('errors').innerHTML += '<div><strong>Error:</strong> ' + msg + ' at ' + line + ':' + col + '</div>';
+        };
+    </script>
+</head>
+<body>
+    <h1>Test Console Errors</h1>
+    <div id="errors" style="color: red; white-space: pre;"></div>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="/app/app.js"></script>
+    <script src="/app/services/tender-api.service.js"></script>
+    <script src="/app/components/tender-list.controller.js"></script>
+    <script>
+        console.log('Testing...');
+        try {
+            angular.module('tenderTrackerApp');
+            console.log('Module exists');
+        } catch(e) {
+            console.error('Module error:', e);
+            document.getElementById('errors').innerHTML += '<div><strong>Module Error:</strong> ' + e.message + '</div>';
+        }
+    </script>
+</body>
+</html>

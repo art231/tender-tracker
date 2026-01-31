@@ -1,0 +1,263 @@
+<div class="container-fluid mt-4" ng-controller="DocumentsController">
+  <!-- Error Alert -->
+  <div class="alert alert-danger alert-dismissible fade show" role="alert" ng-if="error">
+    <strong>Ошибка!</strong> {{error}}
+    <button type="button" class="btn-close" aria-label="Close" ng-click="clearError()"></button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="text-center" ng-if="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <p class="mt-2">Загрузка данных...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div ng-if="!loading">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col">
+        <h2>
+          <i class="bi bi-file-earmark-text"></i>
+          Документы тендера #{{tenderId}}
+        </h2>
+        <p class="text-muted">Управление документами и анализ технологической совместимости</p>
+      </div>
+      <div class="col-auto">
+        <a href="#/tenders" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Назад к списку тендеров
+        </a>
+      </div>
+    </div>
+
+    <!-- Analysis Section -->
+    <div class="card mb-4" ng-if="analysis">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-graph-up"></i>
+          Анализ технологической совместимости
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center mb-3">
+              <div class="me-3">
+                <div class="display-6 fw-bold" ng-class="getMatchScoreClass(analysis.matchScore)">
+                  {{analysis.matchScore}}%
+                </div>
+              </div>
+              <div>
+                <h5 class="mb-1" ng-class="getAnalysisStatusClass()">
+                  {{getAnalysisStatusText()}}
+                </h5>
+                <p class="text-muted mb-0">
+                  Анализ выполнен: {{formatDate(analysis.analyzedAt)}}
+                </p>
+                <p class="text-muted mb-0" ng-if="analysis.analysisNotes">
+                  <small>Комментарии: {{analysis.analysisNotes}}</small>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-primary" ng-click="analyzeTender()">
+                <i class="bi bi-arrow-clockwise"></i> Переанализировать
+              </button>
+              <button class="btn btn-outline-warning" ng-click="updateAnalysis()">
+                <i class="bi bi-pencil"></i> Изменить вручную
+              </button>
+              <button class="btn btn-outline-success" ng-click="markAsVerified()" ng-if="!analysis.manuallyVerified">
+                <i class="bi bi-check-circle"></i> Отметить как проверено
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matched Technologies -->
+        <div class="mt-3" ng-if="analysis.matchedTechnologies && analysis.matchedTechnologies.length > 0">
+          <h6>Найденные технологии:</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-info" ng-repeat="tech in analysis.matchedTechnologies">
+              {{tech.technology}} ({{tech.count}})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Actions -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-cloud-download"></i>
+          Скачать документы
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Тип документа</label>
+            <select class="form-select" ng-model="selectedDocType" ng-options="type.value as type.label for type in documentTypes">
+            </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-primary w-100" ng-click="downloadDocument()">
+              <i class="bi bi-download"></i> Скачать выбранный документ
+            </button>
+          </div>
+        </div>
+        
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <button class="btn btn-outline-primary w-100" ng-click="downloadNotification()">
+              <i class="bi bi-file-earmark-text"></i> Скачать извещение (ТЗ)
+            </button>
+          </div>
+          <div class="col-md-6">
+            <button class="btn btn-outline-success w-100" ng-click="downloadAllDocuments()">
+              <i class="bi bi-download"></i> Скачать все документы
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents List -->
+    <div class="card">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-files"></i>
+          Скачанные документы ({{documents.length}})
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" ng-click="loadDocuments()">
+          <i class="bi bi-arrow-clockwise"></i> Обновить
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Тип</th>
+                <th>Дата публикации</th>
+                <th>Дата скачивания</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="doc in documents" ng-class="{'table-active': selectedDocument && selectedDocument.id === doc.id}" 
+                  ng-click="selectDocument(doc)">
+                <td>
+                  <strong>{{formatDocType(doc.docType)}}</strong>
+                  <span class="badge bg-secondary ms-2" ng-if="doc.technologyAnalysisId">
+                    Проанализирован
+                  </span>
+                </td>
+                <td>{{formatDate(doc.publishedAt)}}</td>
+                <td>{{formatDate(doc.downloadedAt)}}</td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" ng-click="analyzeTender(doc.id)" title="Анализировать">
+                      <i class="bi bi-graph-up"></i>
+                    </button>
+                    <button class="btn btn-outline-info" ng-click="viewSourceJson(doc)" title="Просмотреть JSON">
+                      <i class="bi bi-code"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" ng-click="deleteDocument(doc.id)" title="Удалить">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr ng-if="documents.length === 0">
+                <td colspan="4" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  Нет скачанных документов
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Document Details -->
+    <div class="card mt-4" ng-if="selectedDocument">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-info-circle"></i>
+          Детали документа: {{formatDocType(selectedDocument.docType)}}
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <table class="table table-sm">
+              <tbody>
+                <tr>
+                  <th scope="row">ID документа:</th>
+                  <td>{{selectedDocument.id}}</td>
+                </tr>
+                <tr>
+                  <th scope="row">ID тендера:</th>
+                  <td>{{selectedDocument.tenderId}}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Тип:</th>
+                  <td>{{formatDocType(selectedDocument.docType)}}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Дата публикации:</th>
+                  <td>{{formatDate(selectedDocument.publishedAt)}}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Дата скачивания:</th>
+                  <td>{{formatDate(selectedDocument.downloadedAt)}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" ng-click="analyzeTender(selectedDocument.id)">
+                <i class="bi bi-graph-up"></i> Анализировать этот документ
+              </button>
+              <button class="btn btn-outline-info" ng-click="viewSourceJson(selectedDocument)">
+                <i class="bi bi-code"></i> Просмотреть исходный JSON
+              </button>
+              <button class="btn btn-outline-danger" ng-click="deleteDocument(selectedDocument.id)">
+                <i class="bi bi-trash"></i> Удалить документ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card mt-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-question-circle"></i>
+          Как использовать
+        </h5>
+      </div>
+      <div class="card-body">
+        <ol>
+          <li><strong>Скачайте извещение (ТЗ)</strong> - это основной документ с техническим заданием</li>
+          <li><strong>Проанализируйте документ</strong> - система проверит совместимость с вашим стеком технологий</li>
+          <li><strong>Просмотрите результаты</strong> - процент совпадения и найденные технологии</li>
+          <li><strong>При необходимости скорректируйте</strong> - вы можете вручную изменить результаты анализа</li>
+          <li><strong>Фильтруйте тендеры</strong> - используйте результаты для отбора подходящих закупок</li>
+        </ol>
+        <div class="alert alert-info">
+          <i class="bi bi-lightbulb"></i>
+          <strong>Совет:</strong> Для точного анализа рекомендуется скачивать и анализировать извещение (ТЗ), так как оно содержит полное техническое задание.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

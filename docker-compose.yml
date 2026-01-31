@@ -30,7 +30,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=tendertracker;Username=postgres;Password=postgres"
-      GosPlanApi__BaseUrl: "https://v2.gosplan.info/api/v2"
+      GosPlanApi__BaseUrl: "https://v2.gosplan.info"
       GosPlanApi__RequestDelayMs: "1000" # 1 запрос в секунду
       ASPNETCORE_URLS: "http://+:80"
     ports:

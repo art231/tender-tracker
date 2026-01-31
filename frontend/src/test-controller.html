@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Controller Test</title>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="/app/app.js"></script>
+    <script src="/app/services/tender-api.service.js"></script>
+    <script src="/app/components/tender-list.controller.js"></script>
+    <script>
+        console.log('=== Controller Test Starting ===');
+        
+        function testController() {
+            try {
+                // Check if Angular is loaded
+                if (!angular) {
+                    console.error('Angular not loaded');
+                    return;
+                }
+                
+                // Check if module exists
+                var app = angular.module('tenderTrackerApp');
+                console.log('Module found:', app);
+                
+                // Create injector
+                var injector = angular.injector(['ng', 'tenderTrackerApp']);
+                console.log('Injector created:', injector);
+                
+                // Get controller constructor
+                var TenderListController = injector.get('TenderListController');
+                console.log('Controller constructor:', TenderListController);
+                
+                // Create scope and dependencies
+                var $rootScope = injector.get('$rootScope');
+                var $scope = $rootScope.$new();
+                var TenderApiService = injector.get('TenderApiService');
+                var $timeout = injector.get('$timeout');
+                
+                console.log('Dependencies loaded:', {
+                    $scope: $scope,
+                    TenderApiService: TenderApiService,
+                    $timeout: $timeout
+                });
+                
+                // Instantiate controller
+                var controller = new TenderListController($scope, TenderApiService, $timeout);
+                console.log('Controller instantiated:', controller);
+                console.log('Scope after initialization:', $scope);
+                
+                // Check if loadTenders was called
+                console.log('Checking if loadTenders was called...');
+                
+                document.getElementById('result').innerHTML = 'SUCCESS: Controller loaded and initialized';
+                
+            } catch (e) {
+                console.error('Error:', e);
+                document.getElementById('result').innerHTML = 'ERROR: ' + e.message;
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testController;
+    </script>
+</head>
+<body>
+    <h1>Controller Test Page</h1>
+    <div id="result">Testing...</div>
+    <div id="log"></div>
+</body>
+</html>

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using TenderTracker.API.BackgroundServices;
 using TenderTracker.API.Clients;
+using TenderTracker.API.Config;
 using TenderTracker.API.Data;
 using TenderTracker.API.Services;
 
@@ -59,10 +60,24 @@ builder.Services.Configure<GosPlanApiOptions>(builder.Configuration.GetSection("
 // Register services
 builder.Services.AddScoped<ISearchQueryService, SearchQueryService>();
 builder.Services.AddScoped<IFoundTenderService, FoundTenderService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<ITechnologyAnalysisService, TechnologyAnalysisService>();
+builder.Services.AddScoped<IDocumentExportService, DocumentExportService>();
+
+// Configure export settings
+builder.Services.Configure<ExportSettings>(builder.Configuration.GetSection("ExportSettings"));
+
+// Configure technology stack
+builder.Services.Configure<TechnologyStackConfig>(options =>
+{
+    var defaultConfig = DefaultTechnologyStack.GetDefault();
+    options.Technologies = defaultConfig.Technologies;
+    options.Settings = defaultConfig.Settings;
+});
 
 // Add health checks (temporarily disabled for testing)
-// builder.Services.AddHealthChecks()
-//     .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
 
 // Register background services
 builder.Services.AddHostedService<TenderSearchBackgroundService>();
@@ -71,12 +86,26 @@ builder.Services.AddHostedService<TenderCleanupBackgroundService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "TenderTracker API v1");
-    options.RoutePrefix = "swagger";
-});
+    // В development среде отключаем HTTPS редирект для удобства тестирования
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "TenderTracker API v1");
+        options.RoutePrefix = "swagger";
+        options.DisplayRequestDuration(); // Показывать время выполнения запроса
+    });
+}
+else
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "TenderTracker API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
 
 // Global error handling middleware
 app.UseExceptionHandler(appBuilder =>
@@ -93,19 +122,23 @@ app.UseRouting();
 
 app.UseCors("AllowAngularApp");
 
-app.UseHttpsRedirection();
+// В development среде не используем HTTPS редирект
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthorization();
 
 // Health check endpoint (temporarily disabled)
-// app.MapHealthChecks("/health");
+app.MapHealthChecks("/health");
 
 app.MapControllers();
 
-// Apply database migrations on startup (temporarily disabled)
-// using (var scope = app.Services.CreateScope())
-// {
-//     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//     dbContext.Database.Migrate();
-// }
+// Apply database migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
+}
 
 app.Run();

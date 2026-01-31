@@ -11,9 +11,10 @@ angular.module('tenderTrackerApp', [])
     // Initialize application
     console.log('TenderTracker application started');
     
-    // Load initial data
-    TenderApiService.loadTenders();
+    // Load only queries initially - tenders will be loaded by TenderListController
+    console.log('Loading initial queries...');
     TenderApiService.loadQueries();
+    console.log('Initial queries loading initiated');
     
     // Set up global error handler
     $rootScope.$on('$routeChangeError', function(event, current, previous, rejection) {

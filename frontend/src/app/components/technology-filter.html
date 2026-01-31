@@ -1,0 +1,255 @@
+<div class="container-fluid mt-4" ng-controller="TechnologyFilterController">
+  <!-- Error Alert -->
+  <div class="alert alert-danger alert-dismissible fade show" role="alert" ng-if="error">
+    <strong>Ошибка!</strong> {{error}}
+    <button type="button" class="btn-close" aria-label="Close" ng-click="clearError()"></button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="text-center" ng-if="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <p class="mt-2">Загрузка данных...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div ng-if="!loading">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col">
+        <h2>
+          <i class="bi bi-funnel"></i>
+          Фильтрация по технологическому стеку
+        </h2>
+        <p class="text-muted">Поиск тендеров, совместимых с вашими технологиями</p>
+      </div>
+      <div class="col-auto">
+        <a href="#/tenders" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Назад к списку тендеров
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-sliders"></i>
+          Фильтры
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Минимальный процент совпадения</label>
+            <input type="range" class="form-range" min="0" max="100" step="5" 
+                   ng-model="filters.minMatchScore" ng-change="applyFilters()">
+            <div class="text-center">
+              <span class="badge bg-primary">{{filters.minMatchScore}}%</span>
+            </div>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Технология</label>
+            <select class="form-select" ng-model="filters.technology" ng-change="applyFilters()">
+              <option value="">Все технологии</option>
+              <option ng-repeat="tech in availableTechnologies" value="{{tech}}">
+                {{tech}}
+              </option>
+            </select>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">С даты анализа</label>
+            <input type="date" class="form-control" ng-model="filters.fromDate" ng-change="applyFilters()">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">По дату анализа</label>
+            <input type="date" class="form-control" ng-model="filters.toDate" ng-change="applyFilters()">
+          </div>
+        </div>
+        
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showOnlyVerified" 
+                     ng-model="filters.showOnlyVerified" ng-change="applyFilters()">
+              <label class="form-check-label" for="showOnlyVerified">
+                Только проверенные вручную
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showOnlyCompatible" 
+                     ng-model="filters.showOnlyCompatible" ng-change="applyFilters()">
+              <label class="form-check-label" for="showOnlyCompatible">
+                Только совместимые тендеры
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4 text-end">
+            <button class="btn btn-outline-secondary" ng-click="clearFilters()">
+              <i class="bi bi-x-circle"></i> Сбросить фильтры
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Card -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-graph-up"></i>
+          Статистика по технологиям
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Топ-10 технологий в проанализированных тендерах:</h6>
+            <div class="list-group">
+              <div class="list-group-item d-flex justify-content-between align-items-center" 
+                   ng-repeat="tech in getTopTechnologies()">
+                {{tech.tech}}
+                <span class="badge bg-primary rounded-pill">{{tech.count}}</span>
+              </div>
+              <div class="list-group-item text-muted text-center" ng-if="getTopTechnologies().length === 0">
+                Нет данных о технологиях
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <h6>Общая статистика:</h6>
+            <div class="row text-center">
+              <div class="col-md-4">
+                <div class="card">
+                  <div class="card-body">
+                    <h3>{{compatibleTenders.length || 0}}</h3>
+                    <p class="text-muted mb-0">Совместимых тендеров</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card">
+                  <div class="card-body">
+                    <h3>{{technologyStats.totalAnalyses || 0}}</h3>
+                    <p class="text-muted mb-0">Всего анализов</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card">
+                  <div class="card-body">
+                    <h3>{{technologyStats.uniqueTechnologies || 0}}</h3>
+                    <p class="text-muted mb-0">Уникальных технологий</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-3">
+              <p class="mb-1">
+                <strong>Средний процент совпадения:</strong> 
+                <span class="badge bg-info">{{technologyStats.averageMatchScore || 0}}%</span>
+              </p>
+              <p class="mb-0">
+                <strong>Процент совместимых тендеров:</strong> 
+                <span class="badge bg-success">{{technologyStats.compatibilityRate || 0}}%</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compatible Tenders Table -->
+    <div class="card">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-check-circle"></i>
+          Совместимые тендеры ({{compatibleTenders.length}})
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" ng-click="applyFilters()">
+          <i class="bi bi-arrow-clockwise"></i> Обновить
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Номер закупки</th>
+                <th>Название</th>
+                <th>Заказчик</th>
+                <th>Процент совпадения</th>
+                <th>Статус анализа</th>
+                <th>Найденные технологии</th>
+                <th>Дата анализа</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="tender in compatibleTenders">
+                <td>
+                  <strong>{{tender.purchaseNumber || 'Не указан'}}</strong>
+                </td>
+                <td>{{tender.title || 'Без названия'}}</td>
+                <td>{{tender.customerName || 'Не указан'}}</td>
+                <td ng-bind-html="formatMatchScore(tender.technologyAnalysis?.matchScore || 0)"></td>
+                <td ng-bind-html="getAnalysisStatusBadge(tender.technologyAnalysis)"></td>
+                <td>
+                  <small>{{getMatchedTechnologiesList(tender.technologyAnalysis)}}</small>
+                </td>
+                <td>{{formatDate(tender.technologyAnalysis?.analyzedAt)}}</td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" ng-click="goToDocuments(tender.id)" title="Документы">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </button>
+                    <button class="btn btn-outline-info" ng-click="viewTender(tender)" title="Открыть на zakupki.gov.ru">
+                      <i class="bi bi-box-arrow-up-right"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr ng-if="compatibleTenders.length === 0">
+                <td colspan="8" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  Нет совместимых тендеров
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card mt-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-question-circle"></i>
+          Как использовать фильтрацию
+        </h5>
+      </div>
+      <div class="card-body">
+        <ol>
+          <li><strong>Установите минимальный процент совпадения</strong> - регулируйте ползунок для изменения порога совместимости</li>
+          <li><strong>Выберите конкретную технологию</strong> - фильтруйте тендеры по наличию определенной технологии</li>
+          <li><strong>Используйте даты анализа</strong> - ищите тендеры, проанализированные в определенный период</li>
+          <li><strong>Просматривайте статистику</strong> - анализируйте частоту упоминания технологий в тендерах</li>
+          <li><strong>Переходите к документам</strong> - для детального изучения нажмите на иконку документа</li>
+        </ol>
+        <div class="alert alert-info">
+          <i class="bi bi-lightbulb"></i>
+          <strong>Совет:</strong> Для более точной фильтрации сначала скачайте и проанализируйте извещения (ТЗ) тендеров на странице документов.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

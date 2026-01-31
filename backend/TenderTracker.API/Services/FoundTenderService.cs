@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using TenderTracker.API.Data;
 using TenderTracker.API.Models;
 using TenderTracker.API.DTOs;
@@ -9,6 +10,7 @@ namespace TenderTracker.API.Services
     {
         Task<FoundTenderResponse> GetTendersAsync(TenderSearchParams searchParams);
         Task<FoundTenderDto?> GetByIdAsync(int id);
+        Task<TenderDetailsDto?> GetDetailsByIdAsync(int id);
         Task<bool> ExistsByExternalIdAsync(string externalId);
         Task<FoundTenderDto> AddAsync(FoundTender tender);
         Task<int> AddRangeAsync(IEnumerable<FoundTender> tenders);
@@ -127,6 +129,21 @@ namespace TenderTracker.API.Services
             return tender != null ? MapToDto(tender) : null;
         }
 
+        public async Task<TenderDetailsDto?> GetDetailsByIdAsync(int id)
+        {
+            var tender = await _context.FoundTenders
+                .Include(t => t.FoundByQuery)
+                .Include(t => t.Documents)
+                .Include(t => t.TechnologyAnalyses)
+                    .ThenInclude(ta => ta.Document)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tender == null)
+                return null;
+
+            return MapToDetailsDto(tender);
+        }
+
         public async Task<bool> ExistsByExternalIdAsync(string externalId)
         {
             return await _context.FoundTenders
@@ -194,6 +211,87 @@ namespace TenderTracker.API.Services
                 CustomerInn = tender.CustomerInn,
                 AdditionalInfo = tender.AdditionalInfo
             };
+        }
+
+        private static TenderDetailsDto MapToDetailsDto(FoundTender tender)
+        {
+            var documents = tender.Documents.Select(d => new TenderDocumentDto
+            {
+                Id = d.Id,
+                TenderId = d.TenderId,
+                DocType = d.DocType,
+                PublishedAt = d.PublishedAt,
+                DownloadedAt = d.DownloadedAt,
+                SourceJson = string.IsNullOrEmpty(d.SourceJson) ? null : JsonDocument.Parse(d.SourceJson).RootElement,
+                FilePath = d.FilePath
+            }).ToList();
+
+            var technologyAnalyses = tender.TechnologyAnalyses.Select(ta => new TechnologyAnalysisDto
+            {
+                Id = ta.Id,
+                TenderId = ta.TenderId,
+                MatchScore = ta.MatchScore,
+                MatchedTechnologies = JsonDocument.Parse(ta.MatchedTechnologiesJson).RootElement,
+                IsCompatible = ta.IsCompatible,
+                AnalyzedAt = ta.AnalyzedAt,
+                AnalysisNotes = ta.AnalysisNotes,
+                ManuallyVerified = ta.ManuallyVerified,
+                DocumentId = ta.DocumentId,
+                CompatibilityStatus = ta.IsCompatible ? "Совместим" : "Не совместим",
+                TechnologiesCount = GetTechnologiesCount(ta.MatchedTechnologiesJson),
+                DocumentPublishedAt = ta.Document?.PublishedAt,
+                DocumentType = ta.Document?.DocType
+            }).ToList();
+
+            var stats = new TenderDetailsStatsDto
+            {
+                DocumentsCount = documents.Count,
+                AnalysesCount = technologyAnalyses.Count,
+                HasNotification = documents.Any(d => d.DocType.Contains("notification", StringComparison.OrdinalIgnoreCase) ||
+                                                    d.DocType.Contains("notice", StringComparison.OrdinalIgnoreCase)),
+                HasProtocols = documents.Any(d => d.DocType.Contains("protocol", StringComparison.OrdinalIgnoreCase)),
+                LastDocumentDate = documents.Max(d => d.PublishedAt),
+                LastAnalysisDate = technologyAnalyses.Any() ? technologyAnalyses.Max(ta => ta.AnalyzedAt) : null
+            };
+
+            return new TenderDetailsDto
+            {
+                Id = tender.Id,
+                ExternalId = tender.ExternalId,
+                PurchaseNumber = tender.PurchaseNumber,
+                Title = tender.Title,
+                CustomerName = tender.CustomerName,
+                PublishDate = tender.PublishDate,
+                DirectLinkToSource = tender.DirectLinkToSource,
+                FoundByQueryId = tender.FoundByQueryId,
+                FoundByQueryKeyword = tender.FoundByQuery?.Keyword,
+                SavedAt = tender.SavedAt,
+                
+                // Дополнительные поля
+                ApplicationDeadline = tender.ApplicationDeadline,
+                MaxPrice = tender.MaxPrice,
+                Region = tender.Region,
+                CustomerInn = tender.CustomerInn,
+                AdditionalInfo = tender.AdditionalInfo,
+                
+                // Документы и анализ
+                Documents = documents,
+                TechnologyAnalyses = technologyAnalyses,
+                Stats = stats
+            };
+        }
+
+        private static int GetTechnologiesCount(string matchedTechnologiesJson)
+        {
+            try
+            {
+                var technologies = JsonSerializer.Deserialize<List<JsonElement>>(matchedTechnologiesJson);
+                return technologies?.Count ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
         }
     }
 }

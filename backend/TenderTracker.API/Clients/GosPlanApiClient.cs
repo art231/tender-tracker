@@ -26,6 +26,12 @@ namespace TenderTracker.API.Clients
             decimal? maxPrice = null,
             int? region = null,
             int limit = 100);
+        
+        // Новые методы для работы с документами
+        Task<PurchaseDetails?> GetPurchaseDetailsAsync(string purchaseNumber);
+        Task<Document?> GetNotificationDocumentAsync(string purchaseNumber);
+        Task<List<Document>> GetAllDocumentsAsync(string purchaseNumber);
+        Task<Document?> GetDocumentByTypeAsync(string purchaseNumber, string docType);
     }
 
     public class GosPlanApiClient : IGosPlanApiClient
@@ -73,14 +79,15 @@ namespace TenderTracker.API.Clients
                 // Поиск по 44-ФЗ с расширенными параметрами
                 var endpoint44 = BuildSearchEndpoint("/fz44/purchases", keyword, applicationDeadlineFrom, 
                     applicationDeadlineTo, minPrice, maxPrice, region, limit);
-                _logger.LogInformation("Searching tenders for keyword: {Keyword} (44-FZ) with advanced filters", keyword);
+                _logger.LogInformation("Searching tenders for keyword: {Keyword} (44-FZ) with advanced filters. URL: {Url}", 
+                    keyword, _httpClient.BaseAddress + endpoint44);
 
                 var response44 = await _httpClient.GetAsync(endpoint44);
                 response44.EnsureSuccessStatusCode();
 
                 var json44 = await response44.Content.ReadAsStringAsync();
                 // Логирование для отладки
-                Console.WriteLine($"DEBUG 44-FZ JSON (first 500 chars): {json44.Substring(0, Math.Min(500, json44.Length))}");
+                _logger.LogDebug("44-FZ JSON (first 500 chars): {JsonPrefix}", json44.Substring(0, Math.Min(500, json44.Length)));
                 var tenders44 = JsonSerializer.Deserialize<List<PurchaseIndex>>(json44, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
@@ -89,7 +96,8 @@ namespace TenderTracker.API.Clients
                 // Поиск по 223-ФЗ с расширенными параметрами
                 var endpoint223 = BuildSearchEndpoint("/fz223/purchases", keyword, applicationDeadlineFrom,
                     applicationDeadlineTo, minPrice, maxPrice, region, limit);
-                _logger.LogInformation("Searching tenders for keyword: {Keyword} (223-FZ) with advanced filters", keyword);
+                _logger.LogInformation("Searching tenders for keyword: {Keyword} (223-FZ) with advanced filters. URL: {Url}", 
+                    keyword, _httpClient.BaseAddress + endpoint223);
 
                 var response223 = await _httpClient.GetAsync(endpoint223);
                 response223.EnsureSuccessStatusCode();
@@ -108,8 +116,37 @@ namespace TenderTracker.API.Clients
                     return new List<GosPlanTender>();
                 }
 
-                _logger.LogInformation("Found {Count} tenders for keyword: {Keyword} with filters", allTenders.Count, keyword);
-                return allTenders.Select(t => MapToTender(t, keyword, queryId)).ToList();
+                // Фильтрация нерелевантных результатов
+                var relevantTenders = allTenders
+                    .Where(t => !string.IsNullOrEmpty(t.ObjectInfo) && 
+                           t.ObjectInfo.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                
+                var irrelevantCount = allTenders.Count - relevantTenders.Count;
+                if (irrelevantCount > 0)
+                {
+                    _logger.LogWarning("Filtered out {IrrelevantCount} irrelevant tenders for keyword: {Keyword}. " +
+                        "API returned tenders with ObjectInfo that doesn't contain the keyword.", 
+                        irrelevantCount, keyword);
+                    
+                    // Логируем примеры нерелевантных результатов для отладки
+                    var examples = allTenders
+                        .Where(t => string.IsNullOrEmpty(t.ObjectInfo) || 
+                               !t.ObjectInfo.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                        .Take(3)
+                        .Select(t => t.ObjectInfo ?? "null")
+                        .ToList();
+                    
+                    if (examples.Any())
+                    {
+                        _logger.LogDebug("Examples of irrelevant ObjectInfo values: {Examples}", 
+                            string.Join(", ", examples));
+                    }
+                }
+
+                _logger.LogInformation("Found {Count} tenders for keyword: {Keyword} with filters (relevant: {Relevant})", 
+                    allTenders.Count, keyword, relevantTenders.Count);
+                return relevantTenders.Select(t => MapToTender(t, keyword, queryId)).ToList();
             }
             catch (HttpRequestException ex)
             {
@@ -140,7 +177,7 @@ namespace TenderTracker.API.Clients
         {
             var parameters = new List<string>
             {
-                $"object_info_purchase={Uri.EscapeDataString(keyword)}",
+                $"object_info={Uri.EscapeDataString(keyword)}",
                 $"limit={limit}"
             };
             
@@ -197,7 +234,7 @@ namespace TenderTracker.API.Clients
             }
         }
 
-        private static GosPlanTender MapToTender(PurchaseIndex purchase, string keyword, int? queryId)
+        private GosPlanTender MapToTender(PurchaseIndex purchase, string keyword, int? queryId)
         {
             // Определяем имя заказчика: для 44-ФЗ - первый элемент массива Customers, для 223-ФЗ - поле Customer
             // Если оба пусты, используем Responsible (ИНН) или Placer
@@ -309,12 +346,13 @@ namespace TenderTracker.API.Clients
             // Логируем проблемные случаи
             if (isPurchaseNumberMissing)
             {
-                Console.WriteLine($"DEBUG: PurchaseNumber missing for tender. Customer: {customerName}, Title: {title}, PublishedAt: {purchase.PublishedAt}");
-                Console.WriteLine($"DEBUG: Raw PurchaseNumber value: '{purchase.PurchaseNumber}'");
+                _logger.LogDebug("PurchaseNumber missing for tender. Customer: {Customer}, Title: {Title}, PublishedAt: {PublishedAt}", 
+                    customerName, title, purchase.PublishedAt);
+                _logger.LogDebug("Raw PurchaseNumber value: '{PurchaseNumber}'", purchase.PurchaseNumber);
             }
             else
             {
-                Console.WriteLine($"DEBUG: PurchaseNumber found: '{purchase.PurchaseNumber}'");
+                _logger.LogDebug("PurchaseNumber found: '{PurchaseNumber}'", purchase.PurchaseNumber);
             }
             
             return tender;
@@ -328,6 +366,178 @@ namespace TenderTracker.API.Clients
                 return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
             }
             return dateTime.ToUniversalTime();
+        }
+
+        // Реализация новых методов для работы с документами
+        public async Task<PurchaseDetails?> GetPurchaseDetailsAsync(string purchaseNumber)
+        {
+            await ApplyRateLimit();
+            
+            try
+            {
+                // Пытаемся получить данные по 44-ФЗ
+                var endpoint44 = $"/fz44/purchases/{Uri.EscapeDataString(purchaseNumber)}";
+                _logger.LogInformation("Getting purchase details for {PurchaseNumber} (44-FZ)", purchaseNumber);
+                
+                var response44 = await _httpClient.GetAsync(endpoint44);
+                if (response44.IsSuccessStatusCode)
+                {
+                    var json44 = await response44.Content.ReadAsStringAsync();
+                    var purchase44 = JsonSerializer.Deserialize<JsonElement>(json44, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return ParsePurchaseDetails(purchase44, "44-FZ");
+                }
+                
+                // Если не нашли по 44-ФЗ, пробуем 223-ФЗ
+                var endpoint223 = $"/fz223/purchases/{Uri.EscapeDataString(purchaseNumber)}";
+                _logger.LogInformation("Getting purchase details for {PurchaseNumber} (223-FZ)", purchaseNumber);
+                
+                var response223 = await _httpClient.GetAsync(endpoint223);
+                if (response223.IsSuccessStatusCode)
+                {
+                    var json223 = await response223.Content.ReadAsStringAsync();
+                    var purchase223 = JsonSerializer.Deserialize<JsonElement>(json223, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return ParsePurchaseDetails(purchase223, "223-FZ");
+                }
+                
+                _logger.LogWarning("Purchase not found: {PurchaseNumber}", purchaseNumber);
+                return null;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed for purchase: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "JSON parsing failed for purchase: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error getting purchase details: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+        }
+
+        public async Task<Document?> GetNotificationDocumentAsync(string purchaseNumber)
+        {
+            await ApplyRateLimit();
+            
+            try
+            {
+                // Для 44-ФЗ используем отдельный эндпоинт для извещения
+                var endpoint44 = $"/fz44/purchases/{Uri.EscapeDataString(purchaseNumber)}/notification";
+                _logger.LogInformation("Getting notification document for {PurchaseNumber} (44-FZ)", purchaseNumber);
+                
+                var response44 = await _httpClient.GetAsync(endpoint44);
+                if (response44.IsSuccessStatusCode)
+                {
+                    var json44 = await response44.Content.ReadAsStringAsync();
+                    var document = JsonSerializer.Deserialize<Document>(json44, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return document;
+                }
+                
+                // Для 223-ФЗ получаем все документы и ищем извещение
+                var allDocuments = await GetAllDocumentsAsync(purchaseNumber);
+                var notification = allDocuments.FirstOrDefault(d => 
+                    d.DocType?.Contains("notification", StringComparison.OrdinalIgnoreCase) == true ||
+                    d.DocType?.Contains("notice", StringComparison.OrdinalIgnoreCase) == true);
+                
+                return notification;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed for notification: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "JSON parsing failed for notification: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error getting notification: {PurchaseNumber}", purchaseNumber);
+                throw;
+            }
+        }
+
+        public async Task<List<Document>> GetAllDocumentsAsync(string purchaseNumber)
+        {
+            var purchaseDetails = await GetPurchaseDetailsAsync(purchaseNumber);
+            return purchaseDetails?.Documents ?? new List<Document>();
+        }
+
+        public async Task<Document?> GetDocumentByTypeAsync(string purchaseNumber, string docType)
+        {
+            var allDocuments = await GetAllDocumentsAsync(purchaseNumber);
+            return allDocuments.FirstOrDefault(d => 
+                d.DocType?.Equals(docType, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        private PurchaseDetails? ParsePurchaseDetails(JsonElement purchaseJson, string lawType)
+        {
+            try
+            {
+                var details = new PurchaseDetails
+                {
+                    PurchaseNumber = purchaseJson.TryGetProperty("purchase_number", out var purchaseNumberProp) 
+                        ? purchaseNumberProp.GetString() 
+                        : null,
+                    PurchaseType = purchaseJson.TryGetProperty("purchase_type", out var purchaseTypeProp) 
+                        ? purchaseTypeProp.GetString() 
+                        : null,
+                    PublishedAt = purchaseJson.TryGetProperty("published_at", out var publishedAtProp) 
+                        ? publishedAtProp.GetDateTime() 
+                        : null,
+                    UpdatedAt = purchaseJson.TryGetProperty("updated_at", out var updatedAtProp) 
+                        ? updatedAtProp.GetDateTime() 
+                        : null,
+                    FullResponse = purchaseJson,
+                    Documents = new List<Document>()
+                };
+
+                // Извлекаем документы из поля "docs"
+                if (purchaseJson.TryGetProperty("docs", out var docsProp) && docsProp.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var docElement in docsProp.EnumerateArray())
+                    {
+                        var document = new Document
+                        {
+                            DocType = docElement.TryGetProperty("doc_type", out var docTypeProp) 
+                                ? docTypeProp.GetString() 
+                                : null,
+                            PublishedAt = docElement.TryGetProperty("published_at", out var docPublishedAtProp) 
+                                ? docPublishedAtProp.GetDateTime() 
+                                : null,
+                            Source = docElement.TryGetProperty("source", out var sourceProp) 
+                                ? sourceProp 
+                                : (JsonElement?)null
+                        };
+                        
+                        details.Documents.Add(document);
+                    }
+                }
+
+                return details;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing purchase details for {LawType}", lawType);
+                return null;
+            }
         }
     }
 
@@ -423,6 +633,24 @@ namespace TenderTracker.API.Clients
     {
         public string? DocType { get; set; }
         public DateTime? PublishedAt { get; set; }
+    }
+
+    // Модели для работы с документами
+    public class Document
+    {
+        public string? DocType { get; set; }
+        public DateTime? PublishedAt { get; set; }
+        public JsonElement? Source { get; set; }
+    }
+
+    public class PurchaseDetails
+    {
+        public string? PurchaseNumber { get; set; }
+        public string? PurchaseType { get; set; }
+        public DateTime? PublishedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public List<Document>? Documents { get; set; }
+        public JsonElement? FullResponse { get; set; }
     }
 
     // Старые модели оставлены для обратной совместимости (можно удалить после рефакторинга)

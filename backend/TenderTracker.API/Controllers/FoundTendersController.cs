@@ -128,5 +128,27 @@ namespace TenderTracker.API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        // GET: api/foundtenders/5/details
+        [HttpGet("{id}/details")]
+        public async Task<ActionResult<TenderDetailsDto>> GetFoundTenderDetails(int id)
+        {
+            try
+            {
+                var tenderDetails = await _foundTenderService.GetDetailsByIdAsync(id);
+                
+                if (tenderDetails == null)
+                {
+                    return NotFound($"Tender with ID {id} not found");
+                }
+
+                return Ok(tenderDetails);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting tender details with ID: {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

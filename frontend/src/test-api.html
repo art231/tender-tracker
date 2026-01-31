@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="/app/app.js"></script>
+    <script src="/app/services/tender-api.service.js"></script>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('Global error:', msg, url, line, col, error);
+            document.getElementById('error').innerHTML += '<div>Global error: ' + msg + '</div>';
+        };
+        
+        angular.element(document).ready(function() {
+            try {
+                var app = angular.module('tenderTrackerApp');
+                var injector = angular.injector(['ng', 'tenderTrackerApp']);
+                var TenderApiService = injector.get('TenderApiService');
+            
+                console.log('Testing TenderApiService...');
+                
+                // Subscribe to tenders stream
+                var subscription = TenderApiService.tenders$.subscribe(function(tenders) {
+                    console.log('Tenders stream update:', tenders);
+                    document.getElementById('output').innerHTML += '<div>Tenders received: ' + tenders.items.length + '</div>';
+                    if (tenders.items.length > 0) {
+                        document.getElementById('output').innerHTML += '<div>First tender: ' + JSON.stringify(tenders.items[0]) + '</div>';
+                    }
+                });
+                
+                // Subscribe to loading stream
+                TenderApiService.loading$.subscribe(function(loading) {
+                    console.log('Loading:', loading);
+                    document.getElementById('loading').innerHTML = loading ? 'Loading...' : 'Not loading';
+                });
+                
+                // Subscribe to error stream
+                TenderApiService.error$.subscribe(function(error) {
+                    console.log('Error:', error);
+                    if (error) {
+                        document.getElementById('error').innerHTML = 'Error: ' + JSON.stringify(error);
+                    }
+                });
+                
+                // Call loadTenders
+                console.log('Calling loadTenders...');
+                TenderApiService.loadTenders();
+                
+                // Unsubscribe after 10 seconds
+                setTimeout(function() {
+                    subscription.unsubscribe();
+                    console.log('Test completed');
+                }, 10000);
+            } catch (e) {
+                console.error('Error in test:', e);
+                document.getElementById('error').innerHTML += '<div>Error: ' + e.message + '</div>';
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Test API</h1>
+    <div id="loading">Not loaded</div>
+    <div id="error" style="color: red;"></div>
+    <div id="output" style="white-space: pre;"></div>
+</body>
+</html>

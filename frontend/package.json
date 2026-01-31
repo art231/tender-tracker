@@ -6,8 +6,8 @@
   "scripts": {
     "prepare-libs": "node prepare-libs.js",
     "prestart": "npm run prepare-libs",
-    "start": "http-server src -p 3000 -c-1 -P http://localhost:5000",
-    "start:proxy": "http-server src -p 3000 -c-1 --proxy proxy.conf.json",
+    "start": "http-server src -p 3000 -c-1",
+    "start:proxy": "http-server src -p 3000 -c-1",
     "build": "echo 'No build step required for AngularJS 1.x'",
     "test": "karma start karma.conf.js --single-run --browsers ChromeHeadless",
     "test:watch": "karma start karma.conf.js"

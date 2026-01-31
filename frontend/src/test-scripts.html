@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Script Load Test</title>
+    <script>
+        function testScriptLoad() {
+            console.log('=== Script Load Test Starting ===');
+            
+            // Test AngularJS
+            if (typeof angular !== 'undefined') {
+                console.log('✅ AngularJS loaded:', angular.version.full);
+            } else {
+                console.error('❌ AngularJS NOT loaded');
+            }
+            
+            // Test RxJS
+            if (typeof window.rxjs !== 'undefined') {
+                console.log('✅ RxJS loaded');
+            } else {
+                console.error('❌ RxJS NOT loaded');
+            }
+            
+            // Test jQuery (if needed)
+            if (typeof jQuery !== 'undefined') {
+                console.log('✅ jQuery loaded:', jQuery.fn.jquery);
+            } else {
+                console.log('ℹ️ jQuery not loaded (optional)');
+            }
+            
+            // Test Bootstrap
+            if (typeof bootstrap !== 'undefined') {
+                console.log('✅ Bootstrap loaded');
+            } else {
+                console.log('ℹ️ Bootstrap not loaded (optional)');
+            }
+            
+            // Test if app module exists
+            if (typeof angular !== 'undefined') {
+                try {
+                    var app = angular.module('tenderTrackerApp');
+                    console.log('✅ Angular module "tenderTrackerApp" found');
+                } catch (e) {
+                    console.error('❌ Angular module "tenderTrackerApp" NOT found:', e.message);
+                }
+            }
+            
+            console.log('=== Script Load Test Complete ===');
+        }
+        
+        window.onload = testScriptLoad;
+    </script>
+    
+    <!-- Load all scripts -->
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="/app/app.js"></script>
+    <script src="/app/services/tender-api.service.js"></script>
+    <script src="/app/components/tender-list.controller.js"></script>
+</head>
+<body>
+    <h1>Script Load Test</h1>
+    <p>Open browser console (F12) to see test results.</p>
+    <div id="result"></div>
+</body>
+</html>

@@ -62,6 +62,14 @@
             background-color: #007bff;
             border-color: #007bff;
         }
+        .tab-content {
+            padding-top: 20px;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
     </style>
 </head>
 <body>
@@ -78,291 +86,149 @@
             </div>
         </nav>
 
-        <!-- Error Alert -->
-        <div class="alert alert-danger alert-dismissible fade show" role="alert" 
-             ng-if="error" ng-controller="TenderListController">
-            <strong>Ошибка!</strong> {{error}}
-            <button type="button" class="btn-close" aria-label="Close" ng-click="clearError()"></button>
-        </div>
 
-        <!-- Loading Overlay -->
-        <div class="loading-overlay" ng-if="loading" ng-controller="TenderListController">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Загрузка...</span>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tenders-tab" data-bs-toggle="tab" data-bs-target="#tenders" type="button" role="tab">
+                    <i class="bi bi-list-ul"></i> Список тендеров
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab">
+                    <i class="bi bi-file-earmark-text"></i> Документы и анализ
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="technology-tab" data-bs-toggle="tab" data-bs-target="#technology" type="button" role="tab">
+                    <i class="bi bi-funnel"></i> Фильтрация по технологиям
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="queries-tab" data-bs-toggle="tab" data-bs-target="#queries" type="button" role="tab">
+                    <i class="bi bi-filter"></i> Управление запросами
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabsContent">
+            <!-- Tenders Tab -->
+            <div class="tab-pane fade show active" id="tenders" role="tabpanel" ng-controller="TenderListController">
+                <div ng-include="'app/components/tender-list.html'"></div>
             </div>
-        </div>
 
-        <!-- Main Content -->
-        <div class="row">
-            <!-- Left Column: Query Management -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-filter"></i> Управление поисковыми запросами
+            <!-- Documents Tab -->
+            <div class="tab-pane fade" id="documents" role="tabpanel">
+                <div ng-controller="DocumentsController">
+                    <div class="container-fluid mt-4">
+                        <div class="row mb-4">
+                            <div class="col">
+                                <h2>
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    Документы тендера
+                                </h2>
+                                <p class="text-muted">Управление документами и анализ технологической совместимости</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">ID тендера</span>
+                                    <input type="number" class="form-control" ng-model="tenderId" placeholder="Введите ID тендера" min="1">
+                                    <button class="btn btn-primary" ng-click="loadDocuments()" ng-disabled="!tenderId">
+                                        <i class="bi bi-search"></i> Загрузить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div ng-if="tenderId">
+                            <div ng-include="'app/components/documents.html'"></div>
+                        </div>
+                        <div ng-if="!tenderId" class="text-center text-muted py-5">
+                            <i class="bi bi-file-earmark-text display-1 d-block mb-3"></i>
+                            <h4>Введите ID тендера для работы с документами</h4>
+                            <p>Вы можете найти ID тендера на вкладке "Список тендеров"</p>
+                        </div>
                     </div>
-                    <div class="card-body" ng-controller="QueryManagerController">
-                        <!-- Add Query Form -->
-                        <form ng-submit="addQuery()" class="mb-4">
-                            <div class="mb-3">
-                                <label for="keyword" class="form-label">Ключевое слово</label>
-                                <input type="text" class="form-control" id="keyword" 
-                                       ng-model="newQuery.keyword" 
-                                       placeholder="Например: разработка .NET" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="category" class="form-label">Категория (опционально)</label>
-                                <input type="text" class="form-control" id="category" 
-                                       ng-model="newQuery.category" 
-                                       placeholder="Например: IT">
-                            </div>
-                            <button type="submit" class="btn btn-primary" ng-disabled="loading">
-                                <i class="bi bi-plus-circle"></i> Добавить запрос
-                            </button>
-                        </form>
+                </div>
+            </div>
 
-                        <!-- Queries List -->
-                        <h6>Активные запросы:</h6>
-                        <div class="list-group">
-                            <div class="list-group-item" 
-                                 ng-repeat="query in queries"
-                                 ng-class="{'list-group-item-success': query.isActive, 'list-group-item-secondary': !query.isActive}">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{{query.keyword}}</strong>
-                                        <small class="text-muted d-block">{{query.category || 'Без категории'}}</small>
-                                        <small class="text-muted">Добавлен: {{formatDate(query.createdAt)}}</small>
-                                    </div>
-                                    <div>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   ng-model="query.isActive"
-                                                   ng-change="toggleQuery(query)">
-                                            <label class="form-check-label">
-                                                <span class="badge" 
-                                                      ng-class="query.isActive ? 'badge-active' : 'badge-inactive'">
-                                                    {{query.isActive ? 'Активен' : 'Неактивен'}}
-                                                </span>
-                                            </label>
+            <!-- Technology Filter Tab -->
+            <div class="tab-pane fade" id="technology" role="tabpanel">
+                <div ng-include="'app/components/technology-filter.html'"></div>
+            </div>
+
+            <!-- Queries Tab -->
+            <div class="tab-pane fade" id="queries" role="tabpanel">
+                <div ng-controller="QueryManagerController">
+                    <div class="container-fluid mt-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-filter"></i> Управление поисковыми запросами
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Add Query Form -->
+                                <form ng-submit="addQuery()" class="mb-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="keyword" class="form-label">Ключевое слово</label>
+                                            <input type="text" class="form-control" id="keyword" 
+                                                   ng-model="newQuery.keyword" 
+                                                   placeholder="Например: разработка .NET" required>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-danger mt-1" 
-                                                ng-click="deleteQuery(query.id)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <div class="col-md-4">
+                                            <label for="category" class="form-label">Категория (опционально)</label>
+                                            <input type="text" class="form-control" id="category" 
+                                                   ng-model="newQuery.category" 
+                                                   placeholder="Например: IT">
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary w-100" ng-disabled="loading">
+                                                <i class="bi bi-plus-circle"></i> Добавить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <!-- Queries List -->
+                                <h6>Активные запросы:</h6>
+                                <div class="list-group">
+                                    <div class="list-group-item" 
+                                         ng-repeat="query in queries"
+                                         ng-class="{'list-group-item-success': query.isActive, 'list-group-item-secondary': !query.isActive}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{query.keyword}}</strong>
+                                                <small class="text-muted d-block">{{query.category || 'Без категории'}}</small>
+                                                <small class="text-muted">Добавлен: {{formatDate(query.createdAt)}}</small>
+                                            </div>
+                                            <div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           ng-model="query.isActive"
+                                                           ng-change="toggleQuery(query)">
+                                                    <label class="form-check-label">
+                                                        <span class="badge" 
+                                                              ng-class="query.isActive ? 'badge-active' : 'badge-inactive'">
+                                                            {{query.isActive ? 'Активен' : 'Неактивен'}}
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-danger mt-1" 
+                                                        ng-click="deleteQuery(query.id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item text-muted text-center" ng-if="queries.length === 0">
+                                        Нет добавленных запросов
                                     </div>
                                 </div>
                             </div>
-                            <div class="list-group-item text-muted text-center" ng-if="queries.length === 0">
-                                Нет добавленных запросов
-                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Stats Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-graph-up"></i> Статистика
-                    </div>
-                    <div class="card-body" ng-controller="TenderListController">
-                        <div class="text-center">
-                            <h3>{{tenders.totalCount || 0}}</h3>
-                            <p class="text-muted">Всего найдено тендеров</p>
-                        </div>
-                        <div class="text-center">
-                            <small class="text-muted">
-                                Последнее обновление: {{formatDate(tenders.items[0] && tenders.items[0].savedAt) || 'Нет данных'}}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Tenders List -->
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-list-ul"></i> Найденные тендеры
-                    </div>
-                    <div class="card-body" ng-controller="TenderListController">
-                        <!-- Filters -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <input type="text" class="form-control" 
-                                       ng-model="filters.search"
-                                       placeholder="Поиск по названию или номеру...">
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select" ng-model="filters.queryId">
-                                    <option value="">Все запросы</option>
-                                    <option ng-repeat="query in queries" value="{{query.id}}">
-                                        {{query.keyword}}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button class="btn btn-primary w-100" ng-click="applyFilters()">
-                                    <i class="bi bi-funnel"></i> Применить
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Tenders Table -->
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th ng-click="sortBy('purchaseNumber')" class="clickable">
-                                            Номер закупки <i class="bi" ng-class="getSortIcon('purchaseNumber')"></i>
-                                        </th>
-                                        <th ng-click="sortBy('title')" class="clickable">
-                                            Название <i class="bi" ng-class="getSortIcon('title')"></i>
-                                        </th>
-                                        <th>Заказчик</th>
-                                        <th ng-click="sortBy('publishDate')" class="clickable">
-                                            Дата публикации <i class="bi" ng-class="getSortIcon('publishDate')"></i>
-                                        </th>
-                                        <th ng-click="sortBy('applicationDeadline')" class="clickable">
-                                            Срок подачи заявок <i class="bi" ng-class="getSortIcon('applicationDeadline')"></i>
-                                        </th>
-                                        <th ng-click="sortBy('maxPrice')" class="clickable">
-                                            Максимальная цена <i class="bi" ng-class="getSortIcon('maxPrice')"></i>
-                                        </th>
-                                        <th>Регион</th>
-                                        <th>Найден по запросу</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr ng-repeat="tender in tenders.items">
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <a href="#" ng-click="openTenderLink(tender)" class="clickable me-2">
-                                                    {{formatPurchaseNumber(tender)}}
-                                                </a>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                                            type="button" 
-                                                            data-bs-toggle="dropdown" 
-                                                            aria-expanded="false"
-                                                            title="Варианты поиска">
-                                                        <i class="bi bi-search"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" 
-                                                               ng-click="openTenderLink(tender); $event.stopPropagation()">
-                                                                <i class="bi bi-link-45deg"></i> Основной поиск
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" 
-                                                               ng-click="openSmartSearch(tender); $event.stopPropagation()">
-                                                                <i class="bi bi-magic"></i> Умный поиск
-                                                            </a>
-                                                        </li>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" 
-                                                               ng-if="tender.purchaseNumber && tender.purchaseNumber !== 'N/A'"
-                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.purchaseNumber), '_blank'); $event.stopPropagation()">
-                                                                <i class="bi bi-123"></i> Только по номеру
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" 
-                                                               ng-if="tender.title && tender.title !== 'Без названия'"
-                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.title.substring(0, 50)), '_blank'); $event.stopPropagation()">
-                                                                <i class="bi bi-text-paragraph"></i> По названию
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" 
-                                                               ng-if="tender.customerName"
-                                                               ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.customerName), '_blank'); $event.stopPropagation()">
-                                                                <i class="bi bi-building"></i> По заказчику
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>{{formatTitle(tender.title)}}</td>
-                                        <td>{{formatCustomerName(tender.customerName)}}</td>
-                                        <td>{{formatDate(tender.publishDate)}}</td>
-                                        <td>
-                                            <span ng-class="getDeadlineColorClass(tender.applicationDeadline)">
-                                                {{formatDate(tender.applicationDeadline)}}
-                                                <span ng-if="isDeadlineExpired(tender.applicationDeadline)" class="badge bg-danger ms-1">Истек</span>
-                                            </span>
-                                        </td>
-                                        <td>{{formatMaxPrice(tender.maxPrice)}}</td>
-                                        <td>{{tender.region || 'Не указан'}}</td>
-                                        <td>
-                                            <span class="badge bg-info">
-                                                {{getQueryName(tender.foundByQueryId)}}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr ng-if="tenders.items.length === 0">
-                                        <td colspan="8" class="text-center text-muted">
-                                            Нет найденных тендеров
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <select class="form-select form-select-sm w-auto d-inline-block" 
-                                        ng-model="tenders.pageSize" 
-                                        ng-change="changePageSize()">
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                                <span class="text-muted ms-2">записей на странице</span>
-                            </div>
-                            
-                            <nav>
-                                <ul class="pagination">
-                                    <li class="page-item" ng-class="{disabled: tenders.page === 1}">
-                                        <a class="page-link" href="#" ng-click="changePage(tenders.page - 1)">
-                                            <i class="bi bi-chevron-left"></i>
-                                        </a>
-                                    </li>
-                                    <li class="page-item" ng-repeat="page in [] | range:tenders.totalPages" 
-                                        ng-class="{active: page === tenders.page}">
-                                        <a class="page-link" href="#" ng-click="changePage(page)">
-                                            {{page}}
-                                        </a>
-                                    </li>
-                                    <li class="page-item" ng-class="{disabled: tenders.page === tenders.totalPages}">
-                                        <a class="page-link" href="#" ng-click="changePage(tenders.page + 1)">
-                                            <i class="bi bi-chevron-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-                            
-                            <div class="text-muted">
-                                Страница {{tenders.page}} из {{tenders.totalPages}}
-                                (всего: {{tenders.totalCount}})
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Info Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-info-circle"></i> Информация
-                    </div>
-                    <div class="card-body">
-                        <p>Система автоматически ищет тендеры каждые 30 минут по активным запросам.</p>
-                        <p>Для просмотра деталей тендера нажмите на номер закупки.</p>
-                        <p class="mb-0"><small>Интеграция с ГосПлан API v2. Ограничение: 1 запрос в секунду.</small></p>
                     </div>
                 </div>
             </div>
@@ -372,6 +238,10 @@
         <footer class="mt-4 text-center text-muted">
             <hr>
             <p>TenderTracker &copy; 2024. Система мониторинга тендерных площадок.</p>
+            <p class="small">
+                <i class="bi bi-info-circle"></i> 
+                Интеграция с ГосПлан API v2. Функциональность скачивания документов и анализа технологической совместимости.
+            </p>
         </footer>
     </div>
 
@@ -381,15 +251,76 @@
     <script src="libs/angular/angular.min.js"></script>
     <script src="libs/rxjs/bundles/rxjs.umd.min.js"></script>
     
+    <!-- Debug script -->
+    <script>
+        console.log('=== DEBUG: Loading scripts ===');
+        console.log('Angular loaded:', typeof angular !== 'undefined');
+        console.log('RxJS loaded:', typeof window.rxjs !== 'undefined');
+    </script>
+    
     <!-- Application Scripts -->
     <script src="app/app.js"></script>
     <script src="app/services/tender-api.service.js"></script>
     <script src="app/components/query-manager.controller.js"></script>
     <script src="app/components/tender-list.controller.js"></script>
+    <script src="app/components/documents.controller.js"></script>
+    <script src="app/components/technology-filter.controller.js"></script>
+    
+    <!-- Debug script after loading -->
+    <script>
+        console.log('=== DEBUG: All scripts loaded ===');
+        console.log('Angular loaded:', typeof angular !== 'undefined');
+        console.log('RxJS loaded:', typeof window.rxjs !== 'undefined');
+        console.log('jQuery loaded:', typeof jQuery !== 'undefined');
+        console.log('Bootstrap loaded:', typeof bootstrap !== 'undefined');
+        
+        try {
+            var app = angular.module('tenderTrackerApp');
+            console.log('✅ tenderTrackerApp module found:', app);
+            console.log('✅ Module dependencies:', app.requires);
+            
+            // Test if controllers are registered
+            console.log('✅ TenderListController registered:', app._invokeQueue.some(function(item) {
+                return item[1] === 'controller' && item[2][0] === 'TenderListController';
+            }));
+            
+            console.log('✅ TenderApiService registered:', app._invokeQueue.some(function(item) {
+                return item[1] === 'factory' && item[2][0] === 'TenderApiService';
+            }));
+            
+        } catch (e) {
+            console.error('❌ Error accessing tenderTrackerApp module:', e.message);
+            console.error('Stack:', e.stack);
+        }
+        
+        // Check for AngularJS errors
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('=== GLOBAL ERROR ===');
+            console.error('Message:', message);
+            console.error('Source:', source);
+            console.error('Line:', lineno);
+            console.error('Column:', colno);
+            console.error('Error:', error);
+            return false;
+        };
+    </script>
     
     <!-- Custom Directives/Filters -->
     <script>
-        // Additional filters or directives can be added here
+        // Initialize tabs when Angular is ready
+        angular.module('tenderTrackerApp').run(['$rootScope', function($rootScope) {
+            $rootScope.$on('$viewContentLoaded', function() {
+                // Activate Bootstrap tabs
+                var triggerTabList = [].slice.call(document.querySelectorAll('#mainTabs button'));
+                triggerTabList.forEach(function (triggerEl) {
+                    var tabTrigger = new bootstrap.Tab(triggerEl);
+                    triggerEl.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        tabTrigger.show();
+                    });
+                });
+            });
+        }]);
     </script>
 </body>
 </html>

@@ -16,17 +16,23 @@ angular.module('tenderTrackerApp')
     
     // Initialize
     function init() {
+      console.log('QueryManagerController: Initializing...');
+      
       // Subscribe to queries stream
       const queriesSubscription = TenderApiService.queries$
         .subscribe(queries => {
+          console.log('QueryManagerController: Received queries:', queries);
+          console.log('Number of queries:', queries.length);
           $scope.$evalAsync(() => {
             $scope.queries = queries;
+            console.log('QueryManagerController: $scope.queries updated:', $scope.queries);
           });
         });
       
       // Subscribe to loading stream
       const loadingSubscription = TenderApiService.loading$
         .subscribe(loading => {
+          console.log('QueryManagerController: Loading state:', loading);
           $scope.$evalAsync(() => {
             $scope.loading = loading;
           });
@@ -35,6 +41,7 @@ angular.module('tenderTrackerApp')
       // Subscribe to error stream
       const errorSubscription = TenderApiService.error$
         .subscribe(error => {
+          console.log('QueryManagerController: Error:', error);
           $scope.$evalAsync(() => {
             $scope.error = error;
           });

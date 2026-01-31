@@ -51,5 +51,9 @@ namespace TenderTracker.API.Models
 
         [MaxLength(500)]
         public string? AdditionalInfo { get; set; }
+
+        // Навигационные свойства для документов и анализа
+        public ICollection<TenderDocument> Documents { get; set; } = new List<TenderDocument>();
+        public ICollection<TechnologyAnalysis> TechnologyAnalyses { get; set; } = new List<TechnologyAnalysis>();
     }
 }

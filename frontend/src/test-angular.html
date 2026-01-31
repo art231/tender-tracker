@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AngularJS Test</title>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script>
+        console.log('Starting AngularJS test...');
+        
+        function testAngular() {
+            try {
+                // Check if Angular is loaded
+                console.log('Angular:', angular);
+                if (!angular) {
+                    document.getElementById('result').innerHTML = 'ERROR: Angular not loaded';
+                    return;
+                }
+                
+                // Create a simple module
+                var app = angular.module('testApp', []);
+                
+                // Create a simple controller
+                app.controller('TestController', ['$scope', '$http', function($scope, $http) {
+                    $scope.message = 'AngularJS is working!';
+                    $scope.tenders = [];
+                    $scope.loading = false;
+                    $scope.error = null;
+                    
+                    $scope.loadTenders = function() {
+                        $scope.loading = true;
+                        $scope.error = null;
+                        
+                        $http.get('http://localhost:5000/api/foundtenders?page=1&pageSize=3')
+                            .then(function(response) {
+                                console.log('API Response:', response.data);
+                                $scope.tenders = response.data.tenders || [];
+                                $scope.loading = false;
+                                document.getElementById('result').innerHTML = 'SUCCESS: ' + $scope.tenders.length + ' tenders loaded';
+                            })
+                            .catch(function(error) {
+                                console.error('API Error:', error);
+                                $scope.error = error.data || 'Unknown error';
+                                $scope.loading = false;
+                                document.getElementById('result').innerHTML = 'ERROR: ' + $scope.error;
+                            });
+                    };
+                }]);
+                
+                // Bootstrap Angular manually
+                angular.element(document).ready(function() {
+                    angular.bootstrap(document, ['testApp']);
+                    console.log('Angular bootstrapped successfully');
+                    document.getElementById('status').innerHTML = 'AngularJS initialized';
+                });
+                
+            } catch (e) {
+                console.error('Error:', e);
+                document.getElementById('result').innerHTML = 'ERROR: ' + e.message;
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testAngular;
+    </script>
+</head>
+<body ng-app="testApp" ng-controller="TestController">
+    <h1>AngularJS Test Page</h1>
+    <div id="status">Initializing...</div>
+    <div id="result">Waiting for test...</div>
+    
+    <div ng-if="loading">
+        <p>Loading tenders...</p>
+    </div>
+    
+    <div ng-if="error">
+        <p style="color: red;">Error: {{error}}</p>
+    </div>
+    
+    <div ng-if="tenders.length > 0">
+        <h3>Loaded Tenders ({{tenders.length}}):</h3>
+        <ul>
+            <li ng-repeat="tender in tenders">
+                {{tender.purchaseNumber}} - {{tender.title.substring(0, 50)}}...
+            </li>
+        </ul>
+    </div>
+    
+    <button ng-click="loadTenders()" ng-disabled="loading">Load Tenders</button>
+    
+    <div style="margin-top: 20px;">
+        <h4>Debug Info:</h4>
+        <p>Angular version: {{angular.version.full}}</p>
+        <p>Message: {{message}}</p>
+    </div>
+</body>
+</html>

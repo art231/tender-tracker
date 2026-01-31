@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script src="/libs/rxjs/bundles/rxjs.umd.min.js"></script>
+    <script src="/app/app.js"></script>
+    <script src="/app/services/tender-api.service.js"></script>
+    <script>
+        console.log('Starting test...');
+        
+        function logToDom(msg) {
+            var div = document.createElement('div');
+            div.textContent = msg;
+            document.getElementById('log').appendChild(div);
+        }
+        
+        try {
+            logToDom('Checking Angular...');
+            // Check if Angular is loaded
+            console.log('Angular:', angular);
+            logToDom('Angular loaded: ' + (angular ? 'yes' : 'no'));
+            
+            // Check if module exists
+            var app = angular.module('tenderTrackerApp');
+            console.log('Module found:', app);
+            logToDom('Module found: ' + (app ? 'yes' : 'no'));
+            
+            // Create injector
+            var injector = angular.injector(['ng', 'tenderTrackerApp']);
+            console.log('Injector created:', injector);
+            logToDom('Injector created');
+            
+            // Get service
+            var TenderApiService = injector.get('TenderApiService');
+            console.log('Service obtained:', TenderApiService);
+            logToDom('Service obtained: ' + (TenderApiService ? 'yes' : 'no'));
+            
+            // Check if loadTenders exists
+            console.log('loadTenders function:', TenderApiService.loadTenders);
+            logToDom('loadTenders exists: ' + (TenderApiService.loadTenders ? 'yes' : 'no'));
+            
+            // Call loadTenders
+            console.log('Calling loadTenders...');
+            logToDom('Calling loadTenders...');
+            TenderApiService.loadTenders();
+            
+            logToDom('loadTenders called successfully');
+            
+            // Subscribe to error stream to see if any errors occur
+            TenderApiService.error$.subscribe(function(error) {
+                console.log('Error stream:', error);
+                logToDom('Error stream: ' + JSON.stringify(error));
+            });
+            
+            // Subscribe to tenders stream to see if data arrives
+            TenderApiService.tenders$.subscribe(function(tenders) {
+                console.log('Tenders stream:', tenders);
+                logToDom('Tenders stream: ' + tenders.items.length + ' items');
+            });
+            
+            document.getElementById('status').innerHTML = 'Success! Check console for details.';
+        } catch (e) {
+            console.error('Error:', e);
+            logToDom('ERROR: ' + e.message);
+            document.getElementById('status').innerHTML = 'Error: ' + e.message;
+        }
+    </script>
+</head>
+<body>
+    <h1>Simple Test</h1>
+    <div id="status" style="font-weight: bold;"></div>
+    <div id="log" style="white-space: pre; font-family: monospace; margin-top: 20px; border: 1px solid #ccc; padding: 10px;"></div>
+</body>
+</html>

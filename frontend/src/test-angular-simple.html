@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AngularJS Simple Test</title>
+    <script src="/libs/angular/angular.min.js"></script>
+    <script>
+        console.log('=== AngularJS Simple Test Starting ===');
+        
+        // Create a simple AngularJS app
+        var app = angular.module('simpleTestApp', []);
+        
+        app.controller('SimpleController', ['$scope', function($scope) {
+            console.log('SimpleController initialized');
+            $scope.message = 'AngularJS работает!';
+            $scope.tenders = [
+                {id: 1, title: 'Тестовый тендер 1'},
+                {id: 2, title: 'Тестовый тендер 2'}
+            ];
+        }]);
+        
+        // Manual bootstrap
+        angular.element(document).ready(function() {
+            console.log('Document ready, bootstrapping AngularJS...');
+            try {
+                angular.bootstrap(document, ['simpleTestApp']);
+                console.log('AngularJS bootstrapped successfully');
+            } catch (e) {
+                console.error('Error bootstrapping AngularJS:', e);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div ng-controller="SimpleController">
+        <h1>{{message}}</h1>
+        <p>Текущее время: {{time | date:'medium'}}</p>
+        
+        <h2>Тестовые тендеры:</h2>
+        <ul>
+            <li ng-repeat="tender in tenders">
+                {{tender.id}} - {{tender.title}}
+            </li>
+        </ul>
+        
+        <div ng-if="tenders.length === 0">
+            <p>Нет тендеров</p>
+        </div>
+    </div>
+    
+    <script>
+        // Update time every second
+        setInterval(function() {
+            var scope = angular.element(document.querySelector('[ng-controller="SimpleController"]')).scope();
+            if (scope) {
+                scope.$apply(function() {
+                    scope.time = new Date();
+                });
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

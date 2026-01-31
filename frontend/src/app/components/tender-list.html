@@ -1,0 +1,616 @@
+<div class="container-fluid mt-4">
+  <!-- Error Alert -->
+  <div class="alert alert-danger alert-dismissible fade show" role="alert" ng-if="error">
+    <strong>Ошибка!</strong> {{error}}
+    <button type="button" class="btn-close" aria-label="Close" ng-click="clearError()"></button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="text-center" ng-if="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <p class="mt-2">Загрузка данных...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div ng-if="!loading">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col">
+        <h2>
+          <i class="bi bi-list-ul"></i>
+          Найденные тендеры
+        </h2>
+        <p class="text-muted">Список тендеров, найденных по активным запросам</p>
+      </div>
+      <div class="col-auto">
+        <a href="#/documents/1" class="btn btn-outline-primary" ng-if="tenders.items.length > 0">
+          <i class="bi bi-file-earmark-text"></i> Пример документов
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">
+          <i class="bi bi-funnel"></i>
+          Фильтры
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <input type="text" class="form-control" 
+                   ng-model="filters.search"
+                   placeholder="Поиск по названию или номеру...">
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" ng-model="filters.queryId">
+              <option value="">Все запросы</option>
+              <option ng-repeat="query in queries" value="{{query.id}}">
+                {{query.keyword}}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary w-100" ng-click="applyFilters()">
+              <i class="bi bi-funnel"></i> Применить
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-outline-secondary w-100" ng-click="clearFilters()">
+              <i class="bi bi-x-circle"></i> Сбросить фильтры
+            </button>
+          </div>
+        </div>
+        
+        <!-- Advanced Filters -->
+        <div class="row mt-3">
+          <div class="col-md-3">
+            <label class="form-label">С даты публикации</label>
+            <input type="date" class="form-control" ng-model="filters.fromDate">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">По дату публикации</label>
+            <input type="date" class="form-control" ng-model="filters.toDate">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Срок подачи с</label>
+            <input type="date" class="form-control" ng-model="filters.applicationDeadlineFrom">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Срок подачи по</label>
+            <input type="date" class="form-control" ng-model="filters.applicationDeadlineTo">
+          </div>
+        </div>
+        
+        <!-- Price and region filters -->
+        <div class="row mt-3">
+          <div class="col-md-3">
+            <label class="form-label">Цена от (руб.)</label>
+            <input type="number" class="form-control" ng-model="filters.minPrice" placeholder="0" min="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Цена до (руб.)</label>
+            <input type="number" class="form-control" ng-model="filters.maxPrice" placeholder="1000000" min="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Регион</label>
+            <select class="form-select" ng-model="filters.region">
+              <option value="">Все регионы</option>
+              <option ng-repeat="region in regions" value="{{region}}">{{region}}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Тип закупки</label>
+            <select class="form-select" ng-model="filters.purchaseType">
+              <option ng-repeat="type in purchaseTypes" value="{{type.value}}">{{type.label}}</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showExpired" ng-model="filters.showExpired">
+              <label class="form-check-label" for="showExpired">
+                Показывать тендеры с истекшим сроком подачи
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tender Details Modal -->
+  <div class="modal fade" id="tenderDetailsModal" tabindex="-1" aria-labelledby="tenderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="tenderDetailsModalLabel">
+            <i class="bi bi-info-circle me-2"></i>
+            Детальная информация о тендере
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" ng-click="closeTenderDetails()"></button>
+        </div>
+        <div class="modal-body">
+          
+          <!-- Loading Spinner -->
+          <div class="text-center py-5" ng-if="loadingDetails">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка детальной информации...</p>
+          </div>
+
+          <!-- Error Message -->
+          <div class="alert alert-danger" ng-if="detailsError && !loadingDetails">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{detailsError}}
+          </div>
+
+          <!-- Tender Details Content -->
+          <div ng-if="tenderDetails && !loadingDetails">
+            
+            <!-- Basic Information Card -->
+            <div class="card mb-4">
+              <div class="card-header bg-light">
+                <h5 class="mb-0">
+                  <i class="bi bi-card-text me-2"></i>
+                  Основная информация
+                </h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <dl class="row">
+                      <dt class="col-sm-4">Номер закупки:</dt>
+                      <dd class="col-sm-8">{{formatPurchaseNumber(selectedTender)}}</dd>
+                      
+                      <dt class="col-sm-4">Название:</dt>
+                      <dd class="col-sm-8">{{formatTitle(selectedTender.title)}}</dd>
+                      
+                      <dt class="col-sm-4">Заказчик:</dt>
+                      <dd class="col-sm-8">{{formatCustomerName(selectedTender.customerName)}}</dd>
+                      
+                      <dt class="col-sm-4">ИНН заказчика:</dt>
+                      <dd class="col-sm-8">{{selectedTender.customerInn || 'Не указан'}}</dd>
+                    </dl>
+                  </div>
+                  <div class="col-md-6">
+                    <dl class="row">
+                      <dt class="col-sm-4">Дата публикации:</dt>
+                      <dd class="col-sm-8">{{formatDate(selectedTender.publishDate)}}</dd>
+                      
+                      <dt class="col-sm-4">Срок подачи:</dt>
+                      <dd class="col-sm-8" ng-class="getDeadlineColorClass(selectedTender.applicationDeadline)">
+                        {{formatDate(selectedTender.applicationDeadline)}}
+                        <span ng-if="isDeadlineExpired(selectedTender.applicationDeadline)" class="badge bg-danger ms-1">Истек</span>
+                      </dd>
+                      
+                      <dt class="col-sm-4">Макс. цена:</dt>
+                      <dd class="col-sm-8">{{formatMaxPrice(selectedTender.maxPrice)}}</dd>
+                      
+                      <dt class="col-sm-4">Регион:</dt>
+                      <dd class="col-sm-8">{{getRegionName(selectedTender.region)}}</dd>
+                    </dl>
+                  </div>
+                </div>
+                
+                <!-- Additional Info -->
+                <div class="row mt-3" ng-if="selectedTender.additionalInfo">
+                  <div class="col-12">
+                    <dt>Дополнительная информация:</dt>
+                    <dd>{{selectedTender.additionalInfo}}</dd>
+                  </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="row mt-4">
+                  <div class="col-12">
+                    <div class="btn-group">
+                      <button class="btn btn-primary" ng-click="openTenderLink(selectedTender)">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Открыть на zakupki.gov.ru
+                      </button>
+                      <button class="btn btn-outline-primary" ng-click="openSmartSearch(selectedTender)">
+                        <i class="bi bi-search me-1"></i> Умный поиск
+                      </button>
+                      <a href="#/documents/{{selectedTender.id}}" class="btn btn-outline-info">
+                        <i class="bi bi-file-earmark-text me-1"></i> Документы
+                      </a>
+                      <button class="btn btn-outline-success" ng-click="downloadNotification(selectedTender.id)">
+                        <i class="bi bi-megaphone me-1"></i> Скачать извещение
+                      </button>
+                      <button class="btn btn-outline-warning" ng-click="downloadAllDocuments(selectedTender.id)">
+                        <i class="bi bi-download me-1"></i> Все документы
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="row mb-4">
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h3 class="card-title">{{tenderDetails.stats.documentsCount || 0}}</h3>
+                    <p class="card-text text-muted">Документов</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h3 class="card-title">{{tenderDetails.stats.analysesCount || 0}}</h3>
+                    <p class="card-text text-muted">Анализов</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h3 class="card-title">
+                      <i class="bi" ng-class="tenderDetails.stats.hasNotification ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'"></i>
+                    </h3>
+                    <p class="card-text text-muted">Извещение</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h3 class="card-title">
+                      <i class="bi" ng-class="tenderDetails.stats.hasProtocols ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'"></i>
+                    </h3>
+                    <p class="card-text text-muted">Протоколы</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabs for Documents and Analysis -->
+            <ul class="nav nav-tabs mb-4" id="tenderDetailsTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab">
+                  <i class="bi bi-file-earmark-text me-1"></i> Документы ({{tenderDetails.documents.length}})
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button" role="tab">
+                  <i class="bi bi-gear me-1"></i> Технологический анализ ({{tenderDetails.technologyAnalyses.length}})
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="tenderDetailsTabContent">
+              
+              <!-- Documents Tab -->
+              <div class="tab-pane fade show active" id="documents" role="tabpanel">
+                <div class="table-responsive" ng-if="tenderDetails.documents.length > 0">
+                  <table class="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>Тип документа</th>
+                        <th>Дата публикации</th>
+                        <th>Дата загрузки</th>
+                        <th>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr ng-repeat="doc in tenderDetails.documents">
+                        <td>
+                          <i class="bi me-2" ng-class="getDocumentIcon(doc.docType)"></i>
+                          {{doc.docType}}
+                        </td>
+                        <td>{{formatDate(doc.publishedAt)}}</td>
+                        <td>{{formatDate(doc.downloadedAt)}}</td>
+                        <td>
+                          <button class="btn btn-sm btn-outline-primary" ng-click="downloadDocument(selectedTender.id, doc.docType)">
+                            <i class="bi bi-download"></i> Скачать
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-info" ng-if="tenderDetails.documents.length === 0">
+                  <i class="bi bi-info-circle me-2"></i>
+                  Документы не найдены
+                </div>
+              </div>
+
+              <!-- Technology Analysis Tab -->
+              <div class="tab-pane fade" id="analysis" role="tabpanel">
+                <div class="row" ng-if="tenderDetails.technologyAnalyses.length > 0">
+                  <div class="col-12" ng-repeat="analysis in tenderDetails.technologyAnalyses">
+                    <div class="card mb-3">
+                      <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                          <span class="badge" ng-class="getCompatibilityBadgeClass(analysis.isCompatible)">
+                            {{getCompatibilityText(analysis.isCompatible)}}
+                          </span>
+                          <span class="badge bg-info ms-2">Совпадение: {{analysis.matchScore}}%</span>
+                          <span class="badge bg-secondary ms-2">Технологий: {{analysis.technologiesCount}}</span>
+                        </div>
+                        <small class="text-muted">{{formatDate(analysis.analyzedAt)}}</small>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col-md-8">
+                            <h6>Найденные технологии:</h6>
+                            <p class="mb-2" ng-if="analysis.matchedTechnologies && analysis.matchedTechnologies.length > 0">
+                              {{formatTechnologies(analysis.matchedTechnologies)}}
+                            </p>
+                            <p class="text-muted mb-0" ng-if="!analysis.matchedTechnologies || analysis.matchedTechnologies.length === 0">
+                              Технологии не найдены
+                            </p>
+                            
+                            <div class="mt-3" ng-if="analysis.analysisNotes">
+                              <h6>Примечания:</h6>
+                              <p class="mb-0">{{analysis.analysisNotes}}</p>
+                            </div>
+                          </div>
+                          <div class="col-md-4">
+                            <div class="card">
+                              <div class="card-body">
+                                <h6>Информация о документе:</h6>
+                                <p class="mb-1" ng-if="analysis.documentType">
+                                  <strong>Тип:</strong> {{analysis.documentType}}
+                                </p>
+                                <p class="mb-1" ng-if="analysis.documentPublishedAt">
+                                  <strong>Дата публикации:</strong> {{formatDate(analysis.documentPublishedAt)}}
+                                </p>
+                                <p class="mb-0" ng-if="analysis.manuallyVerified">
+                                  <span class="badge bg-success">Проверено вручную</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="alert alert-info" ng-if="tenderDetails.technologyAnalyses.length === 0">
+                  <i class="bi bi-info-circle me-2"></i>
+                  Технологический анализ не выполнен
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" ng-click="closeTenderDetails()">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
+
+    <!-- Tenders Table -->
+    <div class="card">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-table"></i>
+          Список тендеров ({{tenders.totalCount}})
+        </h5>
+        <div>
+          <button class="btn btn-sm btn-outline-secondary" ng-click="loadTenders()">
+            <i class="bi bi-arrow-clockwise"></i> Обновить
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th ng-click="sortBy('purchaseNumber')" class="clickable">
+                  Номер закупки <i class="bi" ng-class="getSortIcon('purchaseNumber')"></i>
+                </th>
+                <th ng-click="sortBy('title')" class="clickable">
+                  Название <i class="bi" ng-class="getSortIcon('title')"></i>
+                </th>
+                <th>Заказчик</th>
+                <th ng-click="sortBy('publishDate')" class="clickable">
+                  Дата публикации <i class="bi" ng-class="getSortIcon('publishDate')"></i>
+                </th>
+                <th ng-click="sortBy('applicationDeadline')" class="clickable">
+                  Срок подачи <i class="bi" ng-class="getSortIcon('applicationDeadline')"></i>
+                </th>
+                <th ng-click="sortBy('maxPrice')" class="clickable">
+                  Макс. цена <i class="bi" ng-class="getSortIcon('maxPrice')"></i>
+                </th>
+                <th>Регион</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Debug row -->
+              <tr ng-if="true" style="background-color: #f8f9fa;">
+                <td colspan="8" class="text-center small text-muted">
+                  DEBUG: tenders.items.length = {{tenders.items.length}}, tenders.totalCount = {{tenders.totalCount}}, loading = {{loading}}
+                </td>
+              </tr>
+              
+              <tr ng-repeat="tender in tenders.items">
+                <td>
+                  <div class="d-flex align-items-center">
+                    <a href="#" ng-click="openTenderLink(tender)" class="clickable me-2">
+                      {{formatPurchaseNumber(tender)}}
+                    </a>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                              type="button" 
+                              data-bs-toggle="dropdown" 
+                              aria-expanded="false"
+                              title="Варианты поиска">
+                        <i class="bi bi-search"></i>
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li>
+                          <a class="dropdown-item" href="#" 
+                             ng-click="openTenderLink(tender); $event.stopPropagation()">
+                            <i class="bi bi-link-45deg"></i> Основной поиск
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item" href="#" 
+                             ng-click="openSmartSearch(tender); $event.stopPropagation()">
+                            <i class="bi bi-magic"></i> Умный поиск
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <a class="dropdown-item" href="#" 
+                             ng-if="tender.purchaseNumber && tender.purchaseNumber !== 'N/A'"
+                             ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.purchaseNumber), '_blank'); $event.stopPropagation()">
+                            <i class="bi bi-123"></i> Только по номеру
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item" href="#" 
+                             ng-if="tender.title && tender.title !== 'Без названия'"
+                             ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.title.substring(0, 50)), '_blank'); $event.stopPropagation()">
+                            <i class="bi bi-text-paragraph"></i> По названию
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item" href="#" 
+                             ng-if="tender.customerName"
+                             ng-click="window.open('https://zakupki.gov.ru/epz/order/quicksearch/search.html?searchString=' + encodeURIComponent(tender.customerName), '_blank'); $event.stopPropagation()">
+                            <i class="bi bi-building"></i> По заказчику
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </td>
+                <td>{{formatTitle(tender.title)}}</td>
+                <td>{{formatCustomerName(tender.customerName)}}</td>
+                <td>{{formatDate(tender.publishDate)}}</td>
+                <td>
+                  <span ng-class="getDeadlineColorClass(tender.applicationDeadline)">
+                    {{formatDate(tender.applicationDeadline)}}
+                    <span ng-if="isDeadlineExpired(tender.applicationDeadline)" class="badge bg-danger ms-1">Истек</span>
+                  </span>
+                </td>
+                <td>{{formatMaxPrice(tender.maxPrice)}}</td>
+                <td>{{getRegionName(tender.region)}}</td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" ng-click="openTenderDetails(tender)" title="Детальная информация">
+                      <i class="bi bi-info-circle"></i>
+                    </button>
+                    <a href="#/documents/{{tender.id}}" class="btn btn-outline-primary" title="Документы и анализ">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </a>
+                    <button class="btn btn-outline-info" ng-click="openTenderLink(tender)" title="Открыть на zakupki.gov.ru">
+                      <i class="bi bi-box-arrow-up-right"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr ng-if="tenders.items.length === 0">
+                <td colspan="8" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  Нет найденных тендеров
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <select class="form-select form-select-sm w-auto d-inline-block" 
+                    ng-model="tenders.pageSize" 
+                    ng-change="changePageSize()">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <span class="text-muted ms-2">записей на странице</span>
+          </div>
+          
+          <nav>
+            <ul class="pagination mb-0">
+              <!-- Previous page button -->
+              <li class="page-item" ng-class="{disabled: tenders.page === 1}">
+                <a class="page-link" href="#" ng-click="changePage(tenders.page - 1)" aria-label="Previous">
+                  &laquo;
+                </a>
+              </li>
+              
+              <!-- Dynamic page numbers with ellipsis -->
+              <li ng-repeat="item in getPaginationRange() track by $index"
+                  class="page-item"
+                  ng-class="{
+                    active: !item.isEllipsis && item.page === tenders.page,
+                    disabled: item.isEllipsis
+                  }">
+                <a class="page-link" 
+                   ng-if="!item.isEllipsis"
+                   href="#" 
+                   ng-click="changePage(item.page)">
+                  {{item.page}}
+                </a>
+                <span class="page-link" ng-if="item.isEllipsis">...</span>
+              </li>
+              
+              <!-- Next page button -->
+              <li class="page-item" ng-class="{disabled: tenders.page === tenders.totalPages}">
+                <a class="page-link" href="#" ng-click="changePage(tenders.page + 1)" aria-label="Next">
+                  &raquo;
+                </a>
+              </li>
+            </ul>
+          </nav>
+          
+          <div class="text-muted">
+            Страница {{tenders.page}} из {{tenders.totalPages}}
+            (всего: {{tenders.totalCount}})
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="row mt-4">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <h3>{{tenders.totalCount || 0}}</h3>
+            <p class="text-muted mb-0">Всего тендеров</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <h3>{{queries.length || 0}}</h3>
+            <p class="text-muted mb-0">Активных запросов</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <h3>{{tenders.pageSize || 20}}</h3>
+            <p class="text-muted mb-0">На странице</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
