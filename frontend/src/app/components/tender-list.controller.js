@@ -710,6 +710,53 @@ angular.module('tenderTrackerApp')
       };
     })();
     
+    // Export tenders to CSV or Excel
+    $scope.exportTenders = function(format) {
+      console.log('Exporting tenders to', format);
+      
+      // Build query parameters from current filters
+      const params = new URLSearchParams();
+      
+      // Add search parameters
+      if ($scope.filters.search) {
+        params.append('search', $scope.filters.search);
+      }
+      if ($scope.filters.queryId) {
+        params.append('queryId', $scope.filters.queryId);
+      }
+      if ($scope.filters.fromDate) {
+        params.append('fromDate', $scope.formatDateForInput($scope.filters.fromDate));
+      }
+      if ($scope.filters.toDate) {
+        params.append('toDate', $scope.formatDateForInput($scope.filters.toDate));
+      }
+      if ($scope.filters.applicationDeadlineFrom) {
+        params.append('applicationDeadlineFrom', $scope.formatDateForInput($scope.filters.applicationDeadlineFrom));
+      }
+      if ($scope.filters.applicationDeadlineTo) {
+        params.append('applicationDeadlineTo', $scope.formatDateForInput($scope.filters.applicationDeadlineTo));
+      }
+      if ($scope.filters.showExpired) {
+        params.append('showExpired', $scope.filters.showExpired);
+      }
+      if ($scope.filters.sortBy) {
+        params.append('sortBy', $scope.filters.sortBy);
+      }
+      if ($scope.filters.sortDescending !== undefined) {
+        params.append('sortDescending', $scope.filters.sortDescending);
+      }
+      
+      // Add format parameter
+      params.append('format', format);
+      params.append('includeAllFields', 'true');
+      
+      // Build export URL
+      const exportUrl = `/api/foundtenders/export?${params.toString()}`;
+      
+      // Open in new window to trigger download
+      window.open(exportUrl, '_blank');
+    };
+    
     // Initialize controller
     init();
     

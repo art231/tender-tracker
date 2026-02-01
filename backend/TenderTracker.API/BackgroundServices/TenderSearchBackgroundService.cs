@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using TenderTracker.API.Clients;
 using TenderTracker.API.Models;
 using TenderTracker.API.Services;
@@ -113,7 +114,10 @@ namespace TenderTracker.API.BackgroundServices
                         MaxPrice = t.MaxPrice,
                         Region = t.Region,
                         CustomerInn = t.CustomerInn,
-                        AdditionalInfo = t.AdditionalInfo
+                        AdditionalInfo = t.AdditionalInfo,
+                        
+                        // Планы-графики (сохраняем как JSON)
+                        PlanNumbersJson = t.PlanNumbers != null ? JsonSerializer.Serialize(t.PlanNumbers) : null
                     }).ToList();
 
                     // Добавляем тендеры в БД (с дедупликацией)

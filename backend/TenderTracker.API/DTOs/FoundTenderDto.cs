@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 
 namespace TenderTracker.API.DTOs
 {
@@ -21,6 +22,9 @@ namespace TenderTracker.API.DTOs
         public string? Region { get; set; }
         public string? CustomerInn { get; set; }
         public string? AdditionalInfo { get; set; }
+        
+        // Планы-графики
+        public List<string>? PlanNumbers { get; set; }
     }
 
     public class FoundTenderResponse

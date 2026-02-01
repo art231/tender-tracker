@@ -14,6 +14,7 @@ namespace TenderTracker.API.Data
         public DbSet<FoundTender> FoundTenders { get; set; }
         public DbSet<TenderDocument> TenderDocuments { get; set; }
         public DbSet<TechnologyAnalysis> TechnologyAnalyses { get; set; }
+        public DbSet<NotificationSettings> NotificationSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -82,6 +83,18 @@ namespace TenderTracker.API.Data
                       .WithOne(d => d.TechnologyAnalysis)
                       .HasForeignKey<TechnologyAnalysis>(e => e.DocumentId)
                       .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Конфигурация для NotificationSettings
+            modelBuilder.Entity<NotificationSettings>(entity =>
+            {
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.NotificationType);
+                entity.HasIndex(e => e.NotifyOnNewTenders);
+                entity.HasIndex(e => e.NotifyOnDeadlineApproaching);
+                entity.HasIndex(e => e.NotifyOnTechnologyMatch);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.UpdatedAt);
             });
         }
     }

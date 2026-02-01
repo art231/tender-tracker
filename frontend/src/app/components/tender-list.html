@@ -404,6 +404,12 @@
           <button class="btn btn-sm btn-outline-secondary" ng-click="loadTenders()">
             <i class="bi bi-arrow-clockwise"></i> Обновить
           </button>
+          <button class="btn btn-sm btn-success ms-2" ng-click="exportTenders('csv')" title="Экспорт в CSV">
+            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+          </button>
+          <button class="btn btn-sm btn-success ms-1" ng-click="exportTenders('excel')" title="Экспорт в Excel">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+          </button>
         </div>
       </div>
       <div class="card-body p-0">

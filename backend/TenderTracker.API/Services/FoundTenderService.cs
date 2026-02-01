@@ -209,7 +209,12 @@ namespace TenderTracker.API.Services
                 MaxPrice = tender.MaxPrice,
                 Region = tender.Region,
                 CustomerInn = tender.CustomerInn,
-                AdditionalInfo = tender.AdditionalInfo
+                AdditionalInfo = tender.AdditionalInfo,
+                
+                // Планы-графики
+                PlanNumbers = !string.IsNullOrEmpty(tender.PlanNumbersJson) 
+                    ? JsonSerializer.Deserialize<List<string>>(tender.PlanNumbersJson)
+                    : null
             };
         }
 
@@ -273,6 +278,11 @@ namespace TenderTracker.API.Services
                 Region = tender.Region,
                 CustomerInn = tender.CustomerInn,
                 AdditionalInfo = tender.AdditionalInfo,
+                
+                // Планы-графики
+                PlanNumbers = !string.IsNullOrEmpty(tender.PlanNumbersJson) 
+                    ? JsonSerializer.Deserialize<List<string>>(tender.PlanNumbersJson)
+                    : null,
                 
                 // Документы и анализ
                 Documents = documents,

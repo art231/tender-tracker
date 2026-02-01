@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru" ng-app="tenderTracker">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TenderTracker - Настройки уведомлений</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- AngularJS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    
+    <!-- Application scripts -->
+    <script src="src/app/app.js"></script>
+    <script src="src/app/services/tender-api.service.js"></script>
+    <script src="src/app/services/notification.service.js"></script>
+    <script src="src/app/components/notification-settings.controller.js"></script>
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .card-header {
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3">
+                    <i class="bi bi-bell-fill text-primary me-2"></i>
+                    TenderTracker - Настройки уведомлений
+                </h1>
+                <div>
+                    <a href="index.html" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        На главную
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Настройте получение уведомлений о новых тендерах, сроках и совпадениях технологий</p>
+        </header>
+
+        <!-- Main content -->
+        <div ng-controller="NotificationSettingsController as vm">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0">
+                                <i class="bi bi-bell-fill me-2"></i>
+                                Настройки уведомлений
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            
+                            <!-- Loading indicator -->
+                            <div class="text-center" ng-if="vm.loading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2">Загрузка настроек...</p>
+                            </div>
+
+                            <!-- Error message -->
+                            <div class="alert alert-danger" ng-if="vm.error" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                {{ vm.error }}
+                            </div>
+
+                            <!-- Success message -->
+                            <div class="alert alert-success" ng-if="vm.success" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                {{ vm.success }}
+                            </div>
+
+                            <!-- Settings form -->
+                            <div ng-if="!vm.loading && vm.settings">
+                                <form name="notificationForm" novalidate>
+                                    
+                                    <!-- Notification Type -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Тип уведомления</label>
+                                        <select class="form-select" ng-model="vm.settings.notificationType" required>
+                                            <option ng-repeat="type in vm.notificationTypes" value="{{ type.value }}">
+                                                {{ type.label }}
+                                            </option>
+                                        </select>
+                                        <div class="form-text">Выберите способ получения уведомлений</div>
+                                    </div>
+
+                                    <!-- Email settings (shown when email selected) -->
+                                    <div class="mb-3" ng-if="vm.settings.notificationType === 'email'">
+                                        <label class="form-label">Email адрес</label>
+                                        <input type="email" class="form-control" 
+                                               ng-model="vm.settings.emailAddress"
+                                               placeholder="example@domain.com">
+                                        <div class="form-text">Укажите email для получения уведомлений</div>
+                                    </div>
+
+                                    <!-- Telegram settings (shown when telegram selected) -->
+                                    <div class="mb-3" ng-if="vm.settings.notificationType === 'telegram'">
+                                        <label class="form-label">Telegram Chat ID</label>
+                                        <input type="text" class="form-control" 
+                                               ng-model="vm.settings.telegramChatId"
+                                               placeholder="123456789">
+                                        <div class="form-text">Укажите ID чата в Telegram для получения уведомлений</div>
+                                    </div>
+
+                                    <!-- Webhook settings (shown when webhook selected) -->
+                                    <div class="mb-3" ng-if="vm.settings.notificationType === 'webhook'">
+                                        <label class="form-label">Webhook URL</label>
+                                        <input type="url" class="form-control" 
+                                               ng-model="vm.settings.webhookUrl"
+                                               placeholder="https://example.com/webhook">
+                                        <div class="form-text">Укажите URL для отправки webhook уведомлений</div>
+                                    </div>
+
+                                    <!-- Notification Preferences -->
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Настройки уведомлений</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="notifyNewTenders" 
+                                                       ng-model="vm.settings.notifyOnNewTenders">
+                                                <label class="form-check-label" for="notifyNewTenders">
+                                                    Уведомлять о новых тендерах
+                                                </label>
+                                            </div>
+
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="notifyDeadline" 
+                                                       ng-model="vm.settings.notifyOnDeadlineApproaching">
+                                                <label class="form-check-label" for="notifyDeadline">
+                                                    Уведомлять о приближающихся сроках подачи заявок
+                                                </label>
+                                            </div>
+
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="notifyTechMatch" 
+                                                       ng-model="vm.settings.notifyOnTechnologyMatch">
+                                                <label class="form-check-label" for="notifyTechMatch">
+                                                    Уведомлять о совпадениях технологий
+                                                </label>
+                                            </div>
+
+                                            <div class="row mt-3" ng-if="vm.settings.notifyOnDeadlineApproaching">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Дней до предупреждения о сроке</label>
+                                                    <input type="number" class="form-control" 
+                                                           ng-model="vm.settings.deadlineWarningDays"
+                                                           min="1" max="30">
+                                                    <div class="form-text">За сколько дней до срока отправлять уведомление</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Filter Criteria -->
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Критерии фильтрации</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="text-muted">
+                                                Настройте фильтры для уведомлений о новых тендерах. 
+                                                Уведомления будут отправляться только для тендеров, соответствующих критериям.
+                                            </p>
+
+                                            <div class="mb-3" ng-if="vm.settings.filterCriteria && Object.keys(vm.settings.filterCriteria).length > 0">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Ключ</th>
+                                                            <th>Значение</th>
+                                                            <th>Действие</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr ng-repeat="(key, value) in vm.settings.filterCriteria">
+                                                            <td>{{ key }}</td>
+                                                            <td>{{ value }}</td>
+                                                            <td>
+                                                                <button type="button" class="btn btn-sm btn-danger"
+                                                                        ng-click="vm.removeFilterCriterion(key)">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                    ng-click="vm.addFilterCriterion()">
+                                                <i class="bi bi-plus-circle me-1"></i>
+                                                Добавить критерий фильтрации
+                                            </button>
+
+                                            <div class="mt-3">
+                                                <small class="text-muted">
+                                                    <strong>Примеры критериев:</strong><br>
+                                                    • minPrice: 100000 (минимальная цена)<br>
+                                                    • maxPrice: 500000 (максимальная цена)<br>
+                                                    • region: "Москва" (регион)<br>
+                                                    • customerInn: "1234567890" (ИНН заказчика)<br>
+                                                    • purchaseType: "строительство" (тип закупки)
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action buttons -->
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary" 
+                                                ng-click="vm.saveSettings()"
+                                                ng-disabled="vm.saving">
+                                            <span ng-if="vm.saving">
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                Сохранение...
+                                            </span>
+                                            <span ng-if="!vm.saving">
+                                                <i class="bi bi-save me-1"></i>
+                                                Сохранить настройки
+                                            </span>
+                                        </button>
+
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                ng-click="vm.deleteSettings()"
+                                                ng-disabled="!vm.settings.id || vm.saving">
+                                            <i class="bi bi-trash me-1"></i>
+                                            Удалить настройки
+                                        </button>
+
+                                        <button type="button" class="btn btn-outline-success ms-auto" 
+                                                ng-click="vm.testNotification()"
+                                                ng-disabled="!vm.settings.id || vm.testing">
+                                            <span ng-if="vm.testing">
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                Отправка...
+                                            </span>
+                                            <span ng-if="!vm.testing">
+                                                <i class="bi bi-send me-1"></i>
+                                                Тестовое уведомление
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Test message input -->
+                                    <div class="mt-3" ng-if="vm.settings.id">
+                                        <label class="form-label">Тестовое сообщение</label>
+                                        <input type="text" class="form-control" 
+                                               ng-model="vm.message"
+                                               placeholder="Введите тестовое сообщение...">
+                                        <div class="form-text">Сообщение для тестового уведомления</div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Help information -->
+                            <div class="mt-4">
+                                <div class="alert alert-info">
+                                    <h5><i class="bi bi-info-circle-fill me-2"></i>Информация о системе уведомлений</h5>
+                                    <ul class="mb-0">
+                                        <li>Система проверяет новые тендеры каждые 5 минут</li>
+                                        <li>Уведомления отправляются только если включены соответствующие опции</li>
+                                        <li>Для работы email уведомлений настройте SMTP в конфигурации</li>
+                                        <li>Для работы Telegram уведомлений настройте бота и укажите Chat ID</li>
+                                        <li>Webhook уведомления отправляются в формате JSON</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-4 pt-3 border-top text-center text-muted">
+            <p>TenderTracker &copy; 2025. Система отслеживания тендеров с GosPlan.</p>
+            <p class="small">
+                <a href="test-notifications.html" class="text-decoration-none me-3">
+                    <i class="bi bi-bell"></i> Настройки уведомлений
+                </a>
+                <a href="test-tender-display.html" class="text-decoration-none me-3">
+                    <i class="bi bi-list-ul"></i> Список тендеров
+                </a>
+                <a href="test-api.html" class="text-decoration-none">
+                    <i class="bi bi-gear"></i> Тест API
+                </a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Create notification service if it doesn't exist
+        angular.module('tenderTracker', [])
+            .factory('NotificationService', function() {
+                return {
+                    success: function(message) {
+                        console.log('Success:', message);
+                        alert('Успех: ' + message);
+                    },
+                    error: function(message) {
+                        console.error('Error:', message);
+                        alert('Ошибка: ' + message);
+                    }
+                };
+            });
+    </script>
+</body>
+</html>

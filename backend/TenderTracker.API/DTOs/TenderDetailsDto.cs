@@ -23,6 +23,9 @@ namespace TenderTracker.API.DTOs
         public string? CustomerInn { get; set; }
         public string? AdditionalInfo { get; set; }
         
+        // Планы-графики
+        public List<string>? PlanNumbers { get; set; }
+        
         // Документы
         public List<TenderDocumentDto> Documents { get; set; } = new List<TenderDocumentDto>();
         

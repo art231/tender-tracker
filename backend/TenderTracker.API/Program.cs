@@ -63,6 +63,9 @@ builder.Services.AddScoped<IFoundTenderService, FoundTenderService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<ITechnologyAnalysisService, TechnologyAnalysisService>();
 builder.Services.AddScoped<IDocumentExportService, DocumentExportService>();
+builder.Services.AddScoped<ITenderExportService, TenderExportService>();
+builder.Services.AddScoped<INotificationSettingsService, NotificationSettingsService>();
+builder.Services.AddScoped<INotificationSenderService, NotificationSenderService>();
 
 // Configure export settings
 builder.Services.Configure<ExportSettings>(builder.Configuration.GetSection("ExportSettings"));
@@ -82,6 +85,7 @@ builder.Services.AddHealthChecks()
 // Register background services
 builder.Services.AddHostedService<TenderSearchBackgroundService>();
 builder.Services.AddHostedService<TenderCleanupBackgroundService>();
+builder.Services.AddHostedService<NotificationBackgroundService>();
 
 var app = builder.Build();
 

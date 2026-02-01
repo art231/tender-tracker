@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TenderTracker.API.Data;
@@ -11,9 +12,11 @@ using TenderTracker.API.Data;
 namespace TenderTracker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260131123946_AddPlanNumbersField")]
+    partial class AddPlanNumbersField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -95,75 +98,6 @@ namespace TenderTracker.API.Migrations
                     b.HasIndex("SavedAt");
 
                     b.ToTable("FoundTenders");
-                });
-
-            modelBuilder.Entity("TenderTracker.API.Models.NotificationSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DeadlineWarningDays")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("EmailAddress")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("FilterCriteriaJson")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("NotificationType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("NotifyOnDeadlineApproaching")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("NotifyOnNewTenders")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("NotifyOnTechnologyMatch")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("TelegramChatId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("WebhookUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("NotificationType");
-
-                    b.HasIndex("NotifyOnDeadlineApproaching");
-
-                    b.HasIndex("NotifyOnNewTenders");
-
-                    b.HasIndex("NotifyOnTechnologyMatch");
-
-                    b.HasIndex("UpdatedAt");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("NotificationSettings");
                 });
 
             modelBuilder.Entity("TenderTracker.API.Models.SearchQuery", b =>

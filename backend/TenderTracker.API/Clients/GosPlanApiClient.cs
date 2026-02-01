@@ -340,7 +340,10 @@ namespace TenderTracker.API.Clients
                 MaxPrice = purchase.MaxPrice,
                 Region = purchase.Region?.ToString(),
                 CustomerInn = purchase.Responsible,
-                AdditionalInfo = additionalInfo
+                AdditionalInfo = additionalInfo,
+                
+                // Планы-графики
+                PlanNumbers = purchase.PlanNumbers
             };
             
             // Логируем проблемные случаи
@@ -698,5 +701,8 @@ namespace TenderTracker.API.Clients
         public string? Region { get; set; }
         public string? CustomerInn { get; set; }
         public string? AdditionalInfo { get; set; }
+        
+        // Планы-графики
+        public List<string>? PlanNumbers { get; set; }
     }
 }

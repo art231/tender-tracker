@@ -11,13 +11,16 @@ namespace TenderTracker.API.Controllers
     public class FoundTendersController : ControllerBase
     {
         private readonly IFoundTenderService _foundTenderService;
+        private readonly ITenderExportService _tenderExportService;
         private readonly ILogger<FoundTendersController> _logger;
 
         public FoundTendersController(
             IFoundTenderService foundTenderService,
+            ITenderExportService tenderExportService,
             ILogger<FoundTendersController> logger)
         {
             _foundTenderService = foundTenderService;
+            _tenderExportService = tenderExportService;
             _logger = logger;
         }
 
@@ -148,6 +151,55 @@ namespace TenderTracker.API.Controllers
             {
                 _logger.LogError(ex, "Error getting tender details with ID: {Id}", id);
                 return StatusCode(500, "Internal server error");
+            }
+        }
+
+        // GET: api/foundtenders/export
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportTenders(
+            [FromQuery] string? search = null,
+            [FromQuery] int? queryId = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] DateTime? applicationDeadlineFrom = null,
+            [FromQuery] DateTime? applicationDeadlineTo = null,
+            [FromQuery] bool showExpired = false,
+            [FromQuery] string? sortBy = "SavedAt",
+            [FromQuery] bool sortDescending = true,
+            [FromQuery] string format = "csv",
+            [FromQuery] bool includeAllFields = true)
+        {
+            try
+            {
+                var searchParams = new TenderSearchParams
+                {
+                    Page = 1,
+                    PageSize = int.MaxValue, // Экспортируем все данные
+                    Search = search,
+                    QueryId = queryId,
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    ApplicationDeadlineFrom = applicationDeadlineFrom,
+                    ApplicationDeadlineTo = applicationDeadlineTo,
+                    ShowExpired = showExpired,
+                    SortBy = sortBy,
+                    SortDescending = sortDescending
+                };
+
+                var exportResult = await _tenderExportService.ExportTendersAsync(
+                    searchParams, format, includeAllFields);
+
+                return File(exportResult.Content, exportResult.ContentType, exportResult.FileName);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "No data to export");
+                return NotFound("Нет данных для экспорта");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting tenders");
+                return StatusCode(500, "Ошибка при экспорте данных");
             }
         }
     }
