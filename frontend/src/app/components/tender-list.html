@@ -41,18 +41,23 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <input type="text" class="form-control" 
                    ng-model="filters.search"
                    placeholder="Поиск по названию или номеру...">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <select class="form-select" ng-model="filters.queryId">
               <option value="">Все запросы</option>
               <option ng-repeat="query in queries" value="{{query.id}}">
                 {{query.keyword}}
               </option>
             </select>
+          </div>
+          <div class="col-md-2">
+            <input type="text" class="form-control" 
+                   ng-model="filters.foundByQueryKeyword"
+                   placeholder="Фильтр по ключевому запросу...">
           </div>
           <div class="col-md-2">
             <button class="btn btn-primary w-100" ng-click="applyFilters()">
@@ -424,6 +429,9 @@
                   Название <i class="bi" ng-class="getSortIcon('title')"></i>
                 </th>
                 <th>Заказчик</th>
+                <th ng-click="sortBy('foundByQueryKeyword')" class="clickable">
+                  Ключевой запрос <i class="bi" ng-class="getSortIcon('foundByQueryKeyword')"></i>
+                </th>
                 <th ng-click="sortBy('publishDate')" class="clickable">
                   Дата публикации <i class="bi" ng-class="getSortIcon('publishDate')"></i>
                 </th>
@@ -500,6 +508,7 @@
                 </td>
                 <td>{{formatTitle(tender.title)}}</td>
                 <td>{{formatCustomerName(tender.customerName)}}</td>
+                <td>{{tender.foundByQueryKeyword || ''}}</td>
                 <td>{{formatDate(tender.publishDate)}}</td>
                 <td>
                   <span ng-class="getDeadlineColorClass(tender.applicationDeadline)">

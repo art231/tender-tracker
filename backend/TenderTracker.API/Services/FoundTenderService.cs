@@ -51,6 +51,12 @@ namespace TenderTracker.API.Services
                 query = query.Where(t => t.FoundByQueryId == searchParams.QueryId.Value);
             }
 
+            if (!string.IsNullOrEmpty(searchParams.FoundByQueryKeyword))
+            {
+                var keyword = searchParams.FoundByQueryKeyword.ToLower();
+                query = query.Where(t => t.FoundByQuery != null && t.FoundByQuery.Keyword.ToLower().Contains(keyword));
+            }
+
             if (searchParams.FromDate.HasValue)
             {
                 query = query.Where(t => t.SavedAt >= searchParams.FromDate.Value);
@@ -96,6 +102,9 @@ namespace TenderTracker.API.Services
                 "maxprice" => searchParams.SortDescending
                     ? query.OrderByDescending(t => t.MaxPrice)
                     : query.OrderBy(t => t.MaxPrice),
+                "foundbyquerykeyword" => searchParams.SortDescending
+                    ? query.OrderByDescending(t => t.FoundByQuery != null ? t.FoundByQuery.Keyword : "")
+                    : query.OrderBy(t => t.FoundByQuery != null ? t.FoundByQuery.Keyword : ""),
                 _ => searchParams.SortDescending
                     ? query.OrderByDescending(t => t.SavedAt)
                     : query.OrderBy(t => t.SavedAt)

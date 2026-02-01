@@ -21,6 +21,7 @@ angular.module('tenderTrackerApp')
     $scope.filters = {
       search: '',
       queryId: null,
+      foundByQueryKeyword: '',
       fromDate: null,
       toDate: null,
       applicationDeadlineFrom: null,
@@ -244,6 +245,7 @@ angular.module('tenderTrackerApp')
       $scope.filters = {
         search: '',
         queryId: null,
+        foundByQueryKeyword: '',
         fromDate: null,
         toDate: null,
         applicationDeadlineFrom: null,
@@ -723,6 +725,9 @@ angular.module('tenderTrackerApp')
       }
       if ($scope.filters.queryId) {
         params.append('queryId', $scope.filters.queryId);
+      }
+      if ($scope.filters.foundByQueryKeyword) {
+        params.append('foundByQueryKeyword', $scope.filters.foundByQueryKeyword);
       }
       if ($scope.filters.fromDate) {
         params.append('fromDate', $scope.formatDateForInput($scope.filters.fromDate));
