@@ -53,3 +53,5 @@ coverage/
 
 # Dependencies (if any in root)
 node_modules/
+/frontend/nul
+/nul
