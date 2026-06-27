@@ -1,8 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 using TenderTracker.API.Clients;
+using TenderTracker.API.Data;
 using TenderTracker.API.Models;
 using TenderTracker.API.Services;
 
@@ -12,15 +15,18 @@ namespace TenderTracker.API.BackgroundServices
     {
         private readonly ILogger<TenderSearchBackgroundService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly DocumentSyncSettings _settings;
         private readonly TimeSpan _searchInterval = TimeSpan.FromMinutes(30); // Каждые 30 минут
         private readonly TimeSpan _initialDelay = TimeSpan.FromSeconds(10);
 
         public TenderSearchBackgroundService(
             ILogger<TenderSearchBackgroundService> logger,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IOptions<DocumentSyncSettings> settings)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _settings = settings.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,6 +64,8 @@ namespace TenderTracker.API.BackgroundServices
             var searchQueryService = scope.ServiceProvider.GetRequiredService<ISearchQueryService>();
             var foundTenderService = scope.ServiceProvider.GetRequiredService<IFoundTenderService>();
             var gosPlanApiClient = scope.ServiceProvider.GetRequiredService<IGosPlanApiClient>();
+            var documentService = scope.ServiceProvider.GetRequiredService<IDocumentService>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
             // Получаем активные поисковые запросы
             var activeQueries = await searchQueryService.GetActiveQueriesAsync();
@@ -127,6 +135,12 @@ namespace TenderTracker.API.BackgroundServices
                     _logger.LogInformation("Added {AddedCount} new tenders for query: {Keyword} (found: {TotalCount})",
                         addedCount, query.Keyword, gosPlanTenders.Count);
 
+                    // Если включена автоматическая загрузка документов, создаем задачи на загрузку
+                    if (_settings.EnableAutoSync && _settings.DownloadAfterSearch)
+                    {
+                        await CreateDocumentDownloadTasksForNewTendersAsync(dbContext, tendersToAdd, addedCount);
+                    }
+
                     // Небольшая задержка между запросами для соблюдения rate limit
                     await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
@@ -145,6 +159,58 @@ namespace TenderTracker.API.BackgroundServices
         {
             _logger.LogInformation("Tender Search Background Service is stopping.");
             await base.StopAsync(cancellationToken);
+        }
+
+        private async Task CreateDocumentDownloadTasksForNewTendersAsync(
+            ApplicationDbContext dbContext, 
+            List<FoundTender> tendersToAdd, 
+            int addedCount)
+        {
+            try
+            {
+                if (addedCount == 0)
+                    return;
+
+                var tasks = new List<DocumentDownloadTask>();
+                var addedTenders = tendersToAdd.Take(addedCount).ToList();
+
+                foreach (var tender in addedTenders)
+                {
+                    // Создаем задачи на загрузку документов в зависимости от настроек
+                    if (_settings.DownloadNotification)
+                    {
+                        tasks.Add(new DocumentDownloadTask
+                        {
+                            TenderId = tender.Id,
+                            DocType = "notification",
+                            Priority = "high",
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+
+                    if (_settings.DownloadAllDocuments)
+                    {
+                        tasks.Add(new DocumentDownloadTask
+                        {
+                            TenderId = tender.Id,
+                            DocType = "all",
+                            Priority = "normal",
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                if (tasks.Any())
+                {
+                    await dbContext.DocumentDownloadTasks.AddRangeAsync(tasks);
+                    await dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Created {Count} document download tasks for new tenders", tasks.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating document download tasks for new tenders");
+            }
         }
     }
 }

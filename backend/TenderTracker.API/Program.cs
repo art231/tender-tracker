@@ -66,6 +66,7 @@ builder.Services.AddScoped<IDocumentExportService, DocumentExportService>();
 builder.Services.AddScoped<ITenderExportService, TenderExportService>();
 builder.Services.AddScoped<INotificationSettingsService, NotificationSettingsService>();
 builder.Services.AddScoped<INotificationSenderService, NotificationSenderService>();
+builder.Services.AddScoped<IDocumentDownloadTaskService, DocumentDownloadTaskService>();
 
 // Configure export settings
 builder.Services.Configure<ExportSettings>(builder.Configuration.GetSection("ExportSettings"));
@@ -78,6 +79,9 @@ builder.Services.Configure<TechnologyStackConfig>(options =>
     options.Settings = defaultConfig.Settings;
 });
 
+// Configure document sync settings
+builder.Services.Configure<DocumentSyncSettings>(builder.Configuration.GetSection("DocumentSyncSettings"));
+
 // Add health checks (temporarily disabled for testing)
 builder.Services.AddHealthChecks()
     .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -86,6 +90,7 @@ builder.Services.AddHealthChecks()
 builder.Services.AddHostedService<TenderSearchBackgroundService>();
 builder.Services.AddHostedService<TenderCleanupBackgroundService>();
 builder.Services.AddHostedService<NotificationBackgroundService>();
+builder.Services.AddHostedService<DocumentSyncBackgroundService>();
 
 var app = builder.Build();
 

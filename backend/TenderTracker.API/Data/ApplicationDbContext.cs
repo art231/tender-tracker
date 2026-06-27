@@ -15,6 +15,7 @@ namespace TenderTracker.API.Data
         public DbSet<TenderDocument> TenderDocuments { get; set; }
         public DbSet<TechnologyAnalysis> TechnologyAnalyses { get; set; }
         public DbSet<NotificationSettings> NotificationSettings { get; set; }
+        public DbSet<DocumentDownloadTask> DocumentDownloadTasks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -95,6 +96,22 @@ namespace TenderTracker.API.Data
                 entity.HasIndex(e => e.NotifyOnTechnologyMatch);
                 entity.HasIndex(e => e.CreatedAt);
                 entity.HasIndex(e => e.UpdatedAt);
+            });
+
+            // Конфигурация для DocumentDownloadTask
+            modelBuilder.Entity<DocumentDownloadTask>(entity =>
+            {
+                entity.HasIndex(e => e.TenderId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.Priority);
+                entity.HasIndex(e => e.NextRetryAt);
+
+                // Внешний ключ к FoundTender
+                entity.HasOne(e => e.Tender)
+                      .WithMany()
+                      .HasForeignKey(e => e.TenderId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

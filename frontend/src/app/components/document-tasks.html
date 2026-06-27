@@ -1,0 +1,339 @@
+<div class="container-fluid" ng-controller="DocumentTasksController as vm">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-cloud-download me-2"></i>
+                        Задачи загрузки документов
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Статистика -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-muted">Всего задач</h5>
+                                    <h2 class="text-primary">{{vm.stats.totalTasks || 0}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-muted">Ожидание</h5>
+                                    <h2 class="text-warning">{{vm.stats.pendingTasks || 0}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-muted">В процессе</h5>
+                                    <h2 class="text-info">{{vm.stats.inProgressTasks || 0}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-muted">Завершено</h5>
+                                    <h2 class="text-success">{{vm.stats.completedTasks || 0}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Фильтры -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Фильтры</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Статус</label>
+                                    <select class="form-select" ng-model="vm.filters.status" 
+                                            ng-options="status.value as status.label for status in vm.statuses"
+                                            ng-change="vm.loadTasks()">
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Тип документа</label>
+                                    <select class="form-select" ng-model="vm.filters.docType" 
+                                            ng-options="type.value as type.label for type in vm.docTypes"
+                                            ng-change="vm.loadTasks()">
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">ID тендера</label>
+                                    <input type="number" class="form-control" ng-model="vm.filters.tenderId" 
+                                           placeholder="Введите ID тендера">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <button class="btn btn-secondary me-2" ng-click="vm.clearFilters()">
+                                        <i class="bi bi-x-circle me-1"></i> Сбросить фильтры
+                                    </button>
+                                    <button class="btn btn-primary" ng-click="vm.loadTasks()">
+                                        <i class="bi bi-funnel me-1"></i> Применить фильтры
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Управление обновлением -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoRefresh" 
+                                   ng-model="vm.autoRefresh" ng-change="vm.toggleAutoRefresh()">
+                            <label class="form-check-label" for="autoRefresh">
+                                Автообновление (каждые {{vm.refreshInterval}} сек)
+                            </label>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary" ng-click="vm.refresh()" 
+                                    ng-disabled="vm.refreshing">
+                                <i class="bi bi-arrow-clockwise" ng-class="{'spin': vm.refreshing}"></i>
+                                {{vm.refreshing ? 'Обновление...' : 'Обновить'}}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Создание новой задачи -->
+                    <div class="card mb-4" ng-if="false"> <!-- Скрыто по умолчанию -->
+                        <div class="card-header">
+                            <h5 class="mb-0">Создать новую задачу</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">ID тендера</label>
+                                    <input type="number" class="form-control" ng-model="vm.newTaskTenderId" 
+                                           placeholder="Введите ID тендера">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Тип документа</label>
+                                    <select class="form-select" ng-model="vm.newTaskDocType">
+                                        <option value="">Выберите тип</option>
+                                        <option value="notification">Извещение</option>
+                                        <option value="all">Все документы</option>
+                                        <option value="technical_specification">Техническое задание</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Приоритет</label>
+                                    <select class="form-select" ng-model="vm.newTaskPriority">
+                                        <option value="normal">Нормальный</option>
+                                        <option value="high">Высокий</option>
+                                        <option value="low">Низкий</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="btn btn-success" ng-click="vm.createTask()" 
+                                    ng-disabled="!vm.newTaskTenderId || !vm.newTaskDocType">
+                                <i class="bi bi-plus-circle me-1"></i> Создать задачу
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Таблица задач -->
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тендер</th>
+                                    <th>Тип документа</th>
+                                    <th>Статус</th>
+                                    <th>Приоритет</th>
+                                    <th>Создано</th>
+                                    <th>Начато</th>
+                                    <th>Завершено</th>
+                                    <th>Попытки</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="task in vm.tasks">
+                                    <td>{{task.id}}</td>
+                                    <td>
+                                        <div>
+                                            <strong>{{task.purchaseNumber || 'N/A'}}</strong>
+                                        </div>
+                                        <small class="text-muted">{{task.tenderTitle || 'Без названия'}}</small>
+                                        <div>
+                                            <small>ID: {{task.tenderId}}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{task.docType}}</span>
+                                    </td>
+                                    <td>
+                                        <span ng-class="vm.getStatusClass(task.status)">
+                                            {{task.status}}
+                                        </span>
+                                        <div ng-if="task.errorMessage" class="mt-1">
+                                            <small class="text-danger">{{task.errorMessage}}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span ng-class="vm.getPriorityClass(task.priority)">
+                                            {{task.priority || 'normal'}}
+                                        </span>
+                                    </td>
+                                    <td>{{vm.formatDate(task.createdAt)}}</td>
+                                    <td>{{vm.formatDate(task.startedAt)}}</td>
+                                    <td>{{vm.formatDate(task.completedAt)}}</td>
+                                    <td>
+                                        <span class="badge" 
+                                              ng-class="{'bg-warning': task.retryCount > 0, 'bg-light': task.retryCount === 0}">
+                                            {{task.retryCount}}
+                                        </span>
+                                        <div ng-if="task.nextRetryAt">
+                                            <small class="text-muted">Повтор: {{vm.formatDate(task.nextRetryAt)}}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" 
+                                                    ng-click="vm.retryTask(task.id)"
+                                                    ng-disabled="task.status !== 'Failed'"
+                                                    title="Повторить">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning" 
+                                                    ng-click="vm.cancelTask(task.id)"
+                                                    ng-disabled="task.status === 'Completed' || task.status === 'Cancelled'"
+                                                    title="Отменить">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" 
+                                                    ng-click="vm.deleteTask(task.id)"
+                                                    title="Удалить">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr ng-if="vm.tasks.length === 0 && !vm.loading">
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                                        Нет задач для отображения
+                                    </td>
+                                </tr>
+                                <tr ng-if="vm.loading">
+                                    <td colspan="10" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                        <div class="mt-2">Загрузка задач...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Дополнительная статистика -->
+                    <div class="row mt-4" ng-if="vm.stats.totalTasks > 0">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Статистика выполнения</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <p class="mb-1">Среднее время выполнения:</p>
+                                            <h4>{{vm.stats.averageCompletionTimeHours | number:2}} ч</h4>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="mb-1">Процент успешных задач:</p>
+                                            <h4>{{vm.stats.successRate | number:1}}%</h4>
+                                        </div>
+                                    </div>
+                                    <div class="progress mt-3" style="height: 20px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {{vm.stats.successRate || 0}}%">
+                                            {{vm.stats.successRate | number:1}}%
+                                        </div>
+                                        <div class="progress-bar bg-danger" 
+                                             style="width: {{100 - (vm.stats.successRate || 0)}}%">
+                                            {{100 - (vm.stats.successRate || 0) | number:1}}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Распределение по статусам</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <p class="mb-1">Ошибки:</p>
+                                            <h4>{{vm.stats.failedTasks || 0}}</h4>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="mb-1">Отменено:</p>
+                                            <h4>{{vm.stats.cancelledTasks || 0}}</h4>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            Задачи с ошибками: {{vm.stats.tasksWithErrors || 0}}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="bi bi-info-circle me-1"></i>
+                        Всего задач: {{vm.stats.totalTasks || 0}} | 
+                        Последнее обновление: {{vm.formatDate(new Date())}}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.6em;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.progress-bar {
+    font-size: 0.8em;
+    line-height: 20px;
+}
+</style>

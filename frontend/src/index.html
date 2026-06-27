@@ -109,6 +109,11 @@
                     <i class="bi bi-filter"></i> Управление запросами
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab">
+                    <i class="bi bi-cloud-download"></i> Задачи загрузки
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -232,6 +237,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Document Tasks Tab -->
+            <div class="tab-pane fade" id="tasks" role="tabpanel">
+                <div ng-include="'app/components/document-tasks.html'"></div>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -265,6 +275,7 @@
     <script src="app/components/tender-list.controller.js"></script>
     <script src="app/components/documents.controller.js"></script>
     <script src="app/components/technology-filter.controller.js"></script>
+    <script src="app/components/document-tasks.controller.js"></script>
     
     <!-- Debug script after loading -->
     <script>
